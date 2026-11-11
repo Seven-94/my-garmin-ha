@@ -1,4 +1,9 @@
-"""Diagnostics for bug reports: the entry and its coordinators, redacted."""
+"""Diagnostics for bug reports: the entry and its coordinators, redacted.
+
+Coordinator data keeps its structure but loses every personal value:
+identifiers and free text are redacted, measurements and times are replaced by
+their shape.
+"""
 
 import dataclasses
 import re
@@ -25,6 +30,35 @@ _SENSITIVE = re.compile(
 # Menstrual and nutrition data are dropped with their whole subtree, key names
 # included: the names alone say a lot about the person.
 _EXCLUDED = re.compile(r"(?i:menstru|ovulat|pregnan|nutrition|food|meal|diet)")
+
+
+# Times of day reveal habits (sleep, activities, weigh-ins): ISO dates and times
+# are shown by their format only.
+_TIME = re.compile(r"^[0-9]{4}-[0-9]{2}-[0-9]{2}|^[0-9]{1,2}:[0-9]{2}")
+_DIGIT = re.compile(r"[0-9]")
+
+
+def _shape(value: object) -> object:
+    """Replace every measurement by its type and digits: 71350.0 -> <float 99999.9>.
+
+    A dump is attached to a public issue: no health value may leave. The shape
+    is what a parser bug needs (grams or kilograms, int or float, the format of
+    a time). Zero, null and booleans stay, since Garmin uses them for "not
+    measured"; so do catalogue codes, which are plain text.
+    """
+    if isinstance(value, Mapping):
+        return {key: _shape(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_shape(item) for item in value]
+    if isinstance(value, bool) or value is None:
+        return value
+    if isinstance(value, int | float):
+        if value == 0:
+            return value
+        return f"<{type(value).__name__} {_DIGIT.sub('9', str(value))}>"
+    if isinstance(value, str) and _TIME.match(value):
+        return f"<time {_DIGIT.sub('9', value)}>"
+    return value
 
 
 def _without_excluded(value: object) -> object:
@@ -63,7 +97,7 @@ def _coordinator_report(coordinator: DataUpdateCoordinator[Any]) -> dict[str, An
         "update_interval": str(coordinator.update_interval),
         # The class alone: an error message can echo a URL or an account detail.
         "last_exception": None if error is None else type(error).__name__,
-        "data": _redacted(coordinator.data),
+        "data": _shape(_redacted(coordinator.data)),
     }
 
 

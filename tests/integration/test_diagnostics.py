@@ -139,7 +139,12 @@ async def test_diagnostics_hold_no_identifier_name_url_gps_or_free_text(
     assert leaked == []
 
 
-async def test_diagnostics_keep_the_setup_state_and_measurements(
+def _shape(value: float) -> str:
+    """What the dump shows instead of a measurement: its type and digits."""
+    return f"<{type(value).__name__} {re.sub(r'[0-9]', '9', str(value))}>"
+
+
+async def test_diagnostics_keep_the_setup_state_and_the_shape_of_measurements(
     hass: HomeAssistant,
     hass_client: ClientSessionGenerator,
     mock_client: MagicMock,
@@ -165,14 +170,44 @@ async def test_diagnostics_keep_the_setup_state_and_measurements(
     assert daily["last_exception"] is None
     assert daily["data"]["userProfileId"] == REDACTED
     daily_fixture = load_fixture("daily_summary.json")
-    assert daily["data"]["dailyStepGoal"] == daily_fixture["dailyStepGoal"]
+    goal = daily_fixture["dailyStepGoal"]
+    assert daily["data"]["dailyStepGoal"] == _shape(goal)
+    assert daily["data"]["calendarDate"] == "<time 9999-99-99>"
     sleep_fixture = load_fixture("sleep.json")
     sleep = coordinators["sleep"]["data"]
-    assert sleep["sleepTimeSeconds"] == sleep_fixture["sleepTimeSeconds"]
+    assert sleep["sleepTimeSeconds"] == _shape(sleep_fixture["sleepTimeSeconds"])
+    # Garmin's "not measured" markers and catalogue codes stay as they are.
+    zero = next(key for key, value in daily_fixture.items() if value == 0)
+    assert daily["data"][zero] == 0
+    null = next(key for key, value in daily_fixture.items() if value is None)
+    assert daily["data"][null] is None
+    activities = coordinators["activities"]["data"]["activities"]
     activities_fixture = load_fixture("activities_synthetic.json")
-    assert len(coordinators["activities"]["data"]["activities"]) == len(
-        activities_fixture
+    assert len(activities) == len(activities_fixture)
+    activity_type = activities_fixture[0]["activityType"]["typeKey"]
+    assert activities[0]["activityType"]["typeKey"] == activity_type
+
+
+async def test_no_measurement_or_time_survives(
+    hass: HomeAssistant,
+    hass_client: ClientSessionGenerator,
+    mock_client: MagicMock,
+    config_entry: MockConfigEntry,
+) -> None:
+    await _set_up(hass, mock_client, config_entry)
+
+    result: dict[str, Any] = await get_diagnostics_for_config_entry(
+        hass, hass_client, config_entry
     )
+
+    data = [report["data"] for report in result["coordinators"].values()]
+    values = [value for _, value in _pairs(data)]
+    numbers = [
+        v for v in values if isinstance(v, int | float) and not isinstance(v, bool)
+    ]
+    assert set(numbers) <= {0}
+    times = [v for v in values if isinstance(v, str) and re.match(r"[0-9]{4}-", v)]
+    assert times == []
 
 
 async def test_entry_that_failed_to_load_still_reports_its_state(
