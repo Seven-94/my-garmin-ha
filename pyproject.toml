@@ -25,6 +25,10 @@ dev = [
   "zizmor>=1.22.0",
   "pytest-cov>=7.1.0",
   "pyyaml>=6.0.3",
+  # Provided by Home Assistant at runtime (manifest "requirements" stays empty):
+  # needed here only for the tests and the type checker.
+  "aiohttp>=3.14.5",
+  "pytest-asyncio>=1.4.1",
 ]
 
 [tool.pytest.ini_options]
@@ -33,6 +37,8 @@ testpaths = ["tests"]
 # custom_components/, so the tests import it from the repository root.
 pythonpath = ["."]
 addopts = "-v --cov --cov-report=term-missing"
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
 
 [tool.coverage.run]
 source = ["custom_components/my_garmin"]

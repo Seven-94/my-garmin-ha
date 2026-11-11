@@ -1,0 +1,168 @@
+"""Data requests: endpoints, the single retry on 401, error mapping and secrecy."""
+
+import asyncio
+import logging
+from datetime import date
+
+import aiohttp
+import pytest
+
+from custom_components.my_garmin.api import (
+    GarminApiError,
+    GarminAuthError,
+    GarminConnectionError,
+    GarminError,
+    GarminPersonalClient,
+    GarminRateLimitError,
+)
+from tests.api.fake_garmin import FAKE_API_KEY, FakeClock, FakeGarmin, Reply
+
+PROFILE_PATH = "/userprofile-service/userprofile/settings"
+DAILY_PATH = "/usersummary-service/usersummary/daily"
+
+
+async def test_get_user_profile_returns_the_json_object(
+    client: GarminPersonalClient,
+) -> None:
+    assert await client.get_user_profile() == {"path": PROFILE_PATH, "query": {}}
+
+
+async def test_get_daily_summary_sends_the_calendar_date(
+    client: GarminPersonalClient,
+) -> None:
+    summary = await client.get_daily_summary(date(2026, 11, 10))
+
+    assert summary == {"path": DAILY_PATH, "query": {"calendarDate": "2026-11-10"}}
+
+
+async def test_revoked_token_is_renewed_and_request_retried_once(
+    client: GarminPersonalClient, fake_garmin: FakeGarmin
+) -> None:
+    await client.get_user_profile()
+    fake_garmin.revoke_issued()
+
+    assert await client.get_user_profile() == {"path": PROFILE_PATH, "query": {}}
+    assert fake_garmin.exchanges == 2
+
+
+async def test_second_401_raises_auth_error(
+    client: GarminPersonalClient, fake_garmin: FakeGarmin
+) -> None:
+    fake_garmin.data_replies[PROFILE_PATH] = [Reply(status=401), Reply(status=401)]
+
+    with pytest.raises(GarminAuthError):
+        await client.get_user_profile()
+    assert fake_garmin.exchanges == 2
+
+
+async def test_concurrent_401s_trigger_a_single_renewal(
+    client: GarminPersonalClient, fake_garmin: FakeGarmin
+) -> None:
+    await client.get_user_profile()
+    # Both requests use the first token; the second 401 arrives only after the
+    # first request has renewed it.
+    fake_garmin.data_replies[PROFILE_PATH] = [
+        Reply(status=401),
+        Reply(status=401, delay=0.2),
+    ]
+
+    await asyncio.gather(client.get_user_profile(), client.get_user_profile())
+
+    # One exchange for the first token, one for its replacement: the late 401
+    # must not discard the token the first request just obtained.
+    assert fake_garmin.exchanges == 2
+
+
+@pytest.mark.parametrize(
+    ("headers", "expected"),
+    [
+        ({"Retry-After": "120"}, 120.0),
+        ({}, None),
+        ({"Retry-After": "Wed, 11 Nov 2026 16:00:00 GMT"}, None),
+        ({"Retry-After": "-5"}, None),
+    ],
+)
+async def test_429_raises_rate_limit_error_with_retry_after(
+    client: GarminPersonalClient,
+    fake_garmin: FakeGarmin,
+    headers: dict[str, str],
+    expected: float | None,
+) -> None:
+    fake_garmin.data_replies[PROFILE_PATH] = [Reply(status=429, headers=headers)]
+
+    with pytest.raises(GarminRateLimitError) as err:
+        await client.get_user_profile()
+    assert err.value.retry_after == expected
+
+
+@pytest.mark.parametrize("status", [400, 403, 404, 500])
+async def test_http_error_raises_api_error_with_status(
+    client: GarminPersonalClient, fake_garmin: FakeGarmin, status: int
+) -> None:
+    fake_garmin.data_replies[PROFILE_PATH] = [Reply(status=status)]
+
+    with pytest.raises(GarminApiError) as err:
+        await client.get_user_profile()
+    assert err.value.status == status
+
+
+@pytest.mark.parametrize("body", ["<html>", "[1, 2]", ""])
+async def test_payload_that_is_not_a_json_object_raises_api_error(
+    client: GarminPersonalClient, fake_garmin: FakeGarmin, body: str
+) -> None:
+    fake_garmin.data_replies[PROFILE_PATH] = [Reply(body=body)]
+
+    with pytest.raises(GarminApiError):
+        await client.get_user_profile()
+
+
+async def test_timeout_raises_connection_error(
+    session: aiohttp.ClientSession, fake_garmin: FakeGarmin, clock: FakeClock
+) -> None:
+    client = GarminPersonalClient(
+        session, FAKE_API_KEY, base_url=fake_garmin.base_url, clock=clock, timeout=0.05
+    )
+    fake_garmin.data_delay = 1.0
+
+    with pytest.raises(GarminConnectionError):
+        await client.get_user_profile()
+
+
+async def test_all_errors_share_a_base_class() -> None:
+    for error in (
+        GarminApiError,
+        GarminAuthError,
+        GarminConnectionError,
+        GarminRateLimitError,
+    ):
+        assert issubclass(error, GarminError)
+
+
+async def test_key_and_tokens_never_leak(
+    client: GarminPersonalClient,
+    fake_garmin: FakeGarmin,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    caplog.set_level(logging.DEBUG)
+    errors: list[str] = []
+
+    await client.get_user_profile()
+    fake_garmin.revoke_issued()
+    await client.get_user_profile()
+    fake_garmin.data_replies[PROFILE_PATH] = [Reply(status=401), Reply(status=401)]
+    with pytest.raises(GarminAuthError) as auth_err:
+        await client.get_user_profile()
+    errors.append(repr(auth_err.value))
+    fake_garmin.token_replies.append(Reply(status=401))
+    fake_garmin.revoke_issued()
+    with pytest.raises(GarminAuthError) as key_err:
+        await client.get_user_profile()
+    errors.append(repr(key_err.value))
+
+    secrets = [FAKE_API_KEY, *fake_garmin.issued]
+    assert len(secrets) == 4
+    # vars() also renders the token manager, which holds the key.
+    exposed = [caplog.text, repr(client), str(client), repr(vars(client)), *errors]
+    for secret in secrets:
+        for text in exposed:
+            assert secret not in text

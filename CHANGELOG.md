@@ -11,3 +11,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Project setup: tooling, CI, contribution and security guidelines.
 - Integration skeleton `custom_components/my_garmin` (manifest only).
+- Asynchronous client for the Garmin Connect Personal API: API key to token
+  exchange with in-memory renewal, one retry on a revoked token, typed errors.
