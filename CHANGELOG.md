@@ -53,6 +53,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - API key expiry: a diagnostic date sensor, and a repair issue a week before
   the date the user entered (warning), turning into an error once it has
   passed. Reconfiguring with a new key and date removes it.
+- Diagnostics for bug reports: the entry and each coordinator's state, with
+  identifiers, names, URLs, GPS positions and free text redacted; menstrual
+  and nutrition data are left out.
 
 ### Changed
 
