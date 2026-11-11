@@ -29,6 +29,7 @@ from . import MyGarminConfigEntry
 from .api import JsonObject
 from .coordinator import MyGarminCoordinator
 from .entity import MyGarminEntity
+from .key_expiry import key_expires
 
 # Not every Garmin unit has a Home Assistant constant.
 UNIT_STEPS = "steps"
@@ -1000,6 +1001,14 @@ ACTIVITY_SENSORS: tuple[MyGarminSensorDescription, ...] = (
 )
 
 
+KEY_EXPIRY_SENSOR = SensorEntityDescription(
+    key="key_expiry",
+    translation_key="key_expiry",
+    device_class=SensorDeviceClass.DATE,
+    entity_category=EntityCategory.DIAGNOSTIC,
+)
+
+
 async def async_setup_entry(
     hass: HomeAssistant,
     entry: MyGarminConfigEntry,
@@ -1020,6 +1029,7 @@ async def async_setup_entry(
                 MyGarminSensor(data.activities, description)
                 for description in ACTIVITY_SENSORS
             ),
+            MyGarminKeyExpirySensor(data.daily, KEY_EXPIRY_SENSOR),
         ]
     )
 
@@ -1046,3 +1056,19 @@ class MyGarminSensor(MyGarminEntity, SensorEntity):
     def _handle_coordinator_update(self) -> None:
         self._read()
         super()._handle_coordinator_update()
+
+
+class MyGarminKeyExpirySensor(MyGarminEntity, SensorEntity):
+    """The key expiry date the user entered: no Garmin request involved."""
+
+    @property
+    def available(self) -> bool:
+        # Garmin being unreachable does not make the date unknown.
+        return True
+
+    def __init__(
+        self, coordinator: MyGarminCoordinator, description: SensorEntityDescription
+    ) -> None:
+        super().__init__(coordinator, description)
+        # A new date reloads the entry, which creates this entity again.
+        self._attr_native_value = key_expires(coordinator.config_entry)

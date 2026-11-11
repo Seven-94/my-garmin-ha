@@ -501,6 +501,9 @@
       },
       "last_activity": {
         "name": "Last activity"
+      },
+      "key_expiry": {
+        "name": "API key expiry"
       }
     },
     "event": {
@@ -514,6 +517,16 @@
           }
         }
       }
+    }
+  },
+  "issues": {
+    "key_expiring": {
+      "title": "Garmin API key expires soon",
+      "description": "The Garmin personal API key expires on {expires} ({days} day(s) left). Create a new key in Garmin Connect, then enter it with its expiry date: Settings > Devices & services > My Garmin > Reconfigure."
+    },
+    "key_expired": {
+      "title": "Garmin API key has expired",
+      "description": "The Garmin personal API key expired on {expires}: Garmin data is no longer updated. Create a new key in Garmin Connect, then enter it with its expiry date: Settings > Devices & services > My Garmin > Reconfigure."
     }
   }
 }

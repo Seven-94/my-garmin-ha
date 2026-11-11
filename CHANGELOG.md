@@ -50,6 +50,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - New activity event, fired once per activity recorded while Home Assistant
   runs; activities already known at start-up fire nothing. Activity names are
   never logged.
+- API key expiry: a diagnostic date sensor, and a repair issue a week before
+  the date the user entered (warning), turning into an error once it has
+  passed. Reconfiguring with a new key and date removes it.
 
 ### Changed
 
