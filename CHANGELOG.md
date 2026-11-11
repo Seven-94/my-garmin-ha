@@ -35,6 +35,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   next night with the recommended bedtime, sleep alignment, score component
   ratings and stage shares. Score feedback codes are attributes of the sleep
   score.
+- Heart rate variability (HRV) sensors, refreshed after each watch sync: last
+  night average, 7-day average, last night 5-minute high (disabled by default)
+  and HRV status, with the baseline bounds and the feedback code as attributes.
+  Devices without HRV get unknown values, without errors or log entries.
 
 ### Changed
 

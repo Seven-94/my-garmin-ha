@@ -440,6 +440,25 @@
           "medium": "Medium",
           "high": "High"
         }
+      },
+      "hrv_last_night": {
+        "name": "HRV last night"
+      },
+      "hrv_weekly_average": {
+        "name": "HRV 7-day average"
+      },
+      "hrv_last_night_high": {
+        "name": "HRV last night 5-minute high"
+      },
+      "hrv_status": {
+        "name": "HRV status",
+        "state": {
+          "none": "No status",
+          "poor": "Poor",
+          "low": "Low",
+          "unbalanced": "Unbalanced",
+          "balanced": "Balanced"
+        }
       }
     }
   }

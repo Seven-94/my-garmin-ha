@@ -440,6 +440,25 @@
           "medium": "Moyenne",
           "high": "Élevée"
         }
+      },
+      "hrv_last_night": {
+        "name": "VFC nuit dernière"
+      },
+      "hrv_weekly_average": {
+        "name": "VFC moyenne sur 7 jours"
+      },
+      "hrv_last_night_high": {
+        "name": "VFC pic sur 5 min nuit dernière"
+      },
+      "hrv_status": {
+        "name": "Statut VFC",
+        "state": {
+          "none": "Aucun statut",
+          "poor": "Médiocre",
+          "low": "Faible",
+          "unbalanced": "Déséquilibré",
+          "balanced": "Équilibré"
+        }
       }
     }
   }
