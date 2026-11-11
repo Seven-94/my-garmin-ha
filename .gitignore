@@ -1,0 +1,68 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Tool caches
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.tox/
+.nox/
+.ropeproject/
+
+# Coverage
+.coverage
+.coverage.*
+htmlcov/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# macOS / Windows
+.DS_Store
+Thumbs.db
+
+# Editors / IDEs
+.vscode/
+.idea/
+
+# Local env files
+.env
+.env.*
+!.env.example
+
+# Security reports
+.secreports/
+
+# Personal AI agent instructions (shared rules live in AGENTS.md)
+CLAUDE.local.md
+
+# Data that must never be committed. Ignore your own private files in
+# .git/info/exclude or your global Git ignore file, not here.
+# Raw Garmin API responses captured with a real key. Only anonymised
+# fixtures under tests/fixtures/ are committed.
+captures/
+*.raw.json
+*.fit
+# Local Home Assistant dev instance (.storage/ holds the API key).
+dev-config/
+*.db
+*.db-shm
+*.db-wal
+*.log
+# Key material.
+*.key
+*.pem
+secrets.yaml

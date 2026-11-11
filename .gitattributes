@@ -1,0 +1,7 @@
+# Fins de ligne normalisées en LF dans le dépôt, quel que soit l'OS
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.zip binary
+*.fit binary

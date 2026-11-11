@@ -1,0 +1,98 @@
+[project]
+name = "my-garmin-ha"
+authors = [{ name = "Seven-94", email = "64831927+Seven-94@users.noreply.github.com" }]
+# PEP 639 SPDX expression. hatchling >= 1.27 supports it.
+license = "MIT"
+license-files = ["LICENSE"]
+# The version is read from src/my_garmin_ha/__init__.py (see [tool.hatch.version]).
+dynamic = ["version"]
+description = "Home Assistant custom integration for the official Garmin Connect Personal API"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = []
+
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[tool.hatch.version]
+path = "src/my_garmin_ha/__init__.py"
+
+
+[dependency-groups]
+dev = [
+  "pytest>=8.0",
+  "ruff>=0.11",
+  "ty>=0.0.1a",
+  # Sécurité
+  "bandit>=1.7.0",
+  "detect-secrets>=1.4.0",
+  "pip-audit>=2.7.0",
+  "prek>=0.3.6",
+  "zizmor>=1.22.0",
+  "pytest-cov>=7.1.0",
+  "pyyaml>=6.0.3",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v --cov --cov-report=term-missing"
+
+[tool.coverage.run]
+# Package name, not the path: the layout is src/my_garmin_ha/.
+source = ["my_garmin_ha"]
+branch = true
+
+[tool.coverage.report]
+# pytest fails when total coverage drops below this value.
+fail_under = 80
+
+[tool.uv]
+# The CI workflow installs exactly the uv version in its `version` input; keep this
+# lower bound equal to it. The upper bound refuses a new minor (which may change the
+# uv.lock format) until it is raised by hand.
+required-version = ">=0.12.10,<0.13"
+# Only resolve releases published more than 14 days ago (also accepts "2 weeks"
+# or the ISO 8601 form "P14D").
+exclude-newer = "14 days"
+# The version is read dynamically from __init__.py: rebuild the editable install
+# when it changes, so installed metadata never lags behind the source.
+cache-keys = [{ file = "pyproject.toml" }, { file = "src/my_garmin_ha/__init__.py" }]
+
+
+[tool.ruff]
+line-length = 88
+indent-width = 4
+target-version = "py314"
+exclude = [
+  # Vendored agent skills: kept identical to their source, so ruff (which also
+  # formats Python blocks in Markdown) must not rewrite them.
+  ".agents",
+  ".git",
+  ".pytest_cache",
+  ".ruff_cache",
+  ".venv",
+  "build",
+  "dist",
+]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "S", "ARG", "PTH", "SIM", "C4", "RUF", "N", "BLE", "DTZ", "T20"]
+fixable = ["ALL"]
+
+# Ignorer S101 (assert) dans les tests
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S101"]
+
+[tool.ruff.format]
+indent-style = "space"
+quote-style = "double"
+docstring-code-format = true
+line-ending = "auto"
+
+[tool.bandit]
+# B101 (assert) is expected in tests, so tests/ is excluded (aligned with ruff S101).
+# Bandit matches each entry as a glob or a substring of the path: keep the
+# trailing slash, otherwise a file such as src/pkg/contests.py is silently skipped.
+# .venv is listed so that `bandit -r .` does not scan the virtual environment.
+exclude_dirs = [".venv", "tests/"]

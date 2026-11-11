@@ -1,0 +1,30 @@
+name: Feature request
+description: Suggest an idea or an improvement
+labels: ["type: feature", "status: needs-triage"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What problem would this solve? Who has it?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: Note that the Garmin Personal API is read-only and does not expose every Garmin Connect metric.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+  - type: dropdown
+    id: contribute
+    attributes:
+      label: Would you like to work on it?
+      options:
+        - "Yes"
+        - "No"
+        - "Maybe, with guidance"

@@ -1,0 +1,65 @@
+default_install_hook_types: [pre-commit, pre-push]
+
+# The tool hooks run `uv run <tool>`, so their versions come from uv.lock.
+# No hook pins its own version.
+repos:
+  - repo: local
+    hooks:
+      - id: ruff
+        name: ruff
+        entry: uv run ruff check --fix
+        language: system
+        types: [python]
+        stages: [pre-commit]
+
+      - id: ruff-format
+        name: ruff-format
+        entry: uv run ruff format
+        language: system
+        types: [python]
+        stages: [pre-commit]
+
+      - id: detect-secrets
+        name: detect-secrets
+        entry: uv run detect-secrets-hook --baseline .secrets.baseline
+        language: system
+        stages: [pre-commit]
+
+      - id: zizmor
+        name: zizmor
+        entry: uv run zizmor --offline
+        language: system
+        files: ^\.github/(workflows/.*|dependabot)\.ya?ml$
+        stages: [pre-commit]
+
+      - id: bandit
+        name: bandit
+        entry: uv run bandit -c pyproject.toml
+        language: system
+        types: [python]
+        stages: [pre-push]
+
+      # A remote hook runs in prek's own isolated venv and audits that venv
+      # instead of the project's dependencies. `uv run` audits the synced environment.
+      - id: pip-audit
+        name: pip-audit
+        entry: uv run pip-audit --skip-editable
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-push]
+
+  # Hygiene checks built into prek: no network and no extra dependencies.
+  - repo: builtin
+    hooks:
+      - id: check-yaml
+      - id: check-toml
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+        # Keep the two-space line breaks of Markdown (.editorconfig keeps them too).
+        args: [--markdown-linebreak-ext=md]
+      - id: check-merge-conflict
+        # Without this flag the hook only scans during a merge or rebase.
+        args: [--assume-in-merge]
+      - id: check-added-large-files
+      - id: detect-private-key
