@@ -79,12 +79,17 @@ def test_gps_coordinates_are_replaced(anonymiser: Anonymiser) -> None:
 
 def test_demographic_fields_are_replaced(anonymiser: Anonymiser) -> None:
     result = anonymiser.anonymise(
-        {"userData": {"birthDate": "1981-03-04", "gender": "MALE", "height": 181.0}}
+        {
+            "userData": {"birthDate": "1981-03-04", "gender": "MALE", "height": 181.0},
+            "chronologicalAge": 45,
+        }
     )
 
     text = json.dumps(result)
     assert "1981-03-04" not in text
     assert "181.0" not in text
+    assert isinstance(result, dict)
+    assert result["chronologicalAge"] != 45
 
 
 def test_dates_and_timestamps_are_shifted(anonymiser: Anonymiser) -> None:
@@ -117,6 +122,7 @@ def test_measurements_and_durations_are_kept(anonymiser: Anonymiser) -> None:
         "weight": 72_400.0,
         "sleepScores": {"overall": {"value": 81, "qualifierKey": "GOOD"}},
         "timeZone": "Europe/Paris",
+        "firstDayOfWeek": {"dayId": 3, "dayName": "monday"},
         "isValid": True,
         "nothing": None,
     }
@@ -237,3 +243,24 @@ def test_main_fails_without_writing_when_a_leak_remains(
     assert not fixtures.exists()
     assert "profile.json: $.comment" in caplog.text
     assert "Jane Doe" not in caplog.text
+
+
+def test_small_replaced_numbers_do_not_flag_equal_measurements(
+    anonymiser: Anonymiser,
+) -> None:
+    # An age of 41 says nothing once replaced; a heart rate of 41 is no leak.
+    anonymiser.anonymise({"chronologicalAge": 41, "height": 181.0})
+
+    leaks = find_leaks(anonymiser, {"doc.json": {"minHeartRate": 41, "x": 181.0}})
+
+    assert leaks == []
+
+
+def test_distinctive_replaced_numbers_are_still_tracked(
+    anonymiser: Anonymiser,
+) -> None:
+    anonymiser.anonymise({"startLatitude": 43.6123, "ownerId": 987654321})
+
+    leaks = find_leaks(anonymiser, {"doc.json": {"a": 43.6123, "b": 987654321}})
+
+    assert leaks == ["doc.json: $.a", "doc.json: $.b"]

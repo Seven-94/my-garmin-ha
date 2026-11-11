@@ -36,6 +36,8 @@ _ID_KEY = re.compile(r"(?:^id$|Id$|ID$|PK$|Pk$|^uuid$|Uuid$|[Ss]erial)")
 # Catalogue values (activityTypeId, timeZoneId) are not personal.
 _KEPT_ID_KEY = re.compile(r"[Tt]ype|[Tt]imeZone")
 _NAME_KEY = re.compile(r"(?:[Nn]ame$|^email|[Ee]mail[A-Z]|^description$|^notes?$)")
+# Settings named like names: a weekday is not a person.
+_KEPT_NAME_KEY = re.compile(r"^dayName$")
 _URL_KEY = re.compile(r"[Uu]rl")
 _LATITUDE_KEY = re.compile(r"(?:[Ll]atitude|^lat$|Lat$)")
 _LONGITUDE_KEY = re.compile(r"(?:[Ll]ongitude|^lon$|^lng$|Lon$|Lng$)")
@@ -48,6 +50,8 @@ DEMOGRAPHICS: dict[str, Json] = {
     "birthDate": "1985-06-15",
     "gender": "FEMALE",
     "height": 170.0,
+    # The fitness age response gives the real age: as revealing as a birth date.
+    "chronologicalAge": 40,
 }
 FAKE_NAME = "Anonymised"
 FAKE_EMAIL = "user@example.com"
@@ -111,7 +115,11 @@ class Anonymiser:
             return DEMOGRAPHICS[key]
         if _ID_KEY.search(key) and not _KEPT_ID_KEY.search(key):
             return self._fake_id(value)
-        if isinstance(value, str) and _NAME_KEY.search(key):
+        if (
+            isinstance(value, str)
+            and _NAME_KEY.search(key)
+            and not _KEPT_NAME_KEY.search(key)
+        ):
             return FAKE_NAME
         if isinstance(value, str) and _URL_KEY.search(key):
             return FAKE_URL
@@ -132,7 +140,10 @@ class Anonymiser:
         return self._ids[value]
 
     def _remember(self, value: int | float | str) -> None:
-        self._originals.add(value)
+        # Only distinctive numbers are tracked: a replaced age of 41 would
+        # otherwise flag every heart rate of 41 as a leak.
+        if isinstance(value, str) or _is_distinctive(value):
+            self._originals.add(value)
         if isinstance(value, str):
             self._original_dates.update(_DATE_ANYWHERE.findall(value))
 
@@ -184,6 +195,12 @@ class Anonymiser:
             and original in value
             for original in self._originals
         )
+
+
+def _is_distinctive(value: int | float) -> bool:
+    return abs(value) >= _MIN_ID or (
+        isinstance(value, float) and not value.is_integer()
+    )
 
 
 def find_leaks(anonymiser: Anonymiser, docs: dict[str, Json]) -> list[str]:
