@@ -501,6 +501,9 @@
       },
       "last_activity": {
         "name": "Dernière activité"
+      },
+      "key_expiry": {
+        "name": "Expiration de la clé API"
       }
     },
     "event": {
@@ -514,6 +517,16 @@
           }
         }
       }
+    }
+  },
+  "issues": {
+    "key_expiring": {
+      "title": "La clé API Garmin expire bientôt",
+      "description": "La clé API personnelle Garmin expire le {expires} ({days} jour(s) restant(s)). Créez une nouvelle clé dans Garmin Connect, puis saisissez-la avec sa date d'expiration : Paramètres > Appareils et services > My Garmin > Reconfigurer."
+    },
+    "key_expired": {
+      "title": "La clé API Garmin a expiré",
+      "description": "La clé API personnelle Garmin a expiré le {expires} : les données Garmin ne sont plus mises à jour. Créez une nouvelle clé dans Garmin Connect, puis saisissez-la avec sa date d'expiration : Paramètres > Appareils et services > My Garmin > Reconfigurer."
     }
   }
 }

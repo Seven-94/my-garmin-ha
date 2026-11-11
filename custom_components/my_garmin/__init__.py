@@ -16,8 +16,15 @@ from .coordinator import (
     SyncWatcher,
     WeightCoordinator,
 )
+from .key_expiry import async_remove_key_expiry_issue, async_track_key_expiry
 
-__all__ = ["DOMAIN", "MyGarminConfigEntry", "async_setup_entry", "async_unload_entry"]
+__all__ = [
+    "DOMAIN",
+    "MyGarminConfigEntry",
+    "async_remove_entry",
+    "async_setup_entry",
+    "async_unload_entry",
+]
 
 PLATFORMS = [Platform.BINARY_SENSOR, Platform.EVENT, Platform.SENSOR]
 
@@ -30,6 +37,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: MyGarminConfigEntry) -> 
     The first refresh also checks the key: a rejected key starts
     re-authentication, a network error or a 429 retries the set-up later.
     """
+    # Before any request: an expired key is reported even when Garmin
+    # rejects it and the set-up fails.
+    async_track_key_expiry(hass, entry)
     client = GarminPersonalClient(
         async_get_clientsession(hass), entry.data[CONF_API_KEY]
     )
@@ -62,3 +72,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: MyGarminConfigEntry) -> 
 
 async def async_unload_entry(hass: HomeAssistant, entry: MyGarminConfigEntry) -> bool:
     return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+
+
+async def async_remove_entry(hass: HomeAssistant, entry: MyGarminConfigEntry) -> None:
+    del entry
+    async_remove_key_expiry_issue(hass)

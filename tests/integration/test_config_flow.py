@@ -132,6 +132,8 @@ async def test_reauth_replaces_the_key(
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "reauth_successful"
+    # The flow reloads the entry in the background: let it finish.
+    await hass.async_block_till_done()
     assert config_entry.data == new_input
     assert mock_client.factory.call_args.args[1] == OTHER_API_KEY
 
@@ -181,6 +183,8 @@ async def test_reconfigure_updates_the_key_and_expiry(
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "reconfigure_successful"
+    # The flow reloads the entry in the background: let it finish.
+    await hass.async_block_till_done()
     assert config_entry.data == new_input
     del mock_client
 
