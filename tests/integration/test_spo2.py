@@ -30,6 +30,10 @@ READINGS = {
 }
 SPO2_KEYS = (*READINGS, "acclimation_altitude")
 DISABLED_BY_DEFAULT = {
+    # Same values as the daily summary's SpO2 sensors.
+    "acclimation_spo2_average",
+    "acclimation_spo2_lowest",
+    "acclimation_spo2_latest",
     "acclimation_spo2_tomorrow_sleep_average",
     "acclimation_altitude",
 }
@@ -138,7 +142,7 @@ async def test_spo2_units_and_classes(
 
 
 @pytest.mark.usefixtures("summary", "spo2")
-async def test_tomorrow_sleep_and_altitude_are_disabled_by_default(
+async def test_niche_and_duplicate_spo2_sensors_are_disabled_by_default(
     hass: HomeAssistant, config_entry: MockConfigEntry
 ) -> None:
     await _setup(hass, config_entry)
@@ -194,7 +198,8 @@ async def test_last_spo2_day_is_kept_until_the_next_one(
     mock_client.get_spo2.return_value = empty
     await config_entry.runtime_data.spo2.async_refresh()
 
-    assert float(_state(hass, "acclimation_spo2_average").state) == spo2["averageSpO2"]
+    seven_days = float(_state(hass, "acclimation_spo2_seven_day_average").state)
+    assert seven_days == spo2["lastSevenDaysAvgSpO2"]
 
 
 async def test_a_new_watch_sync_refreshes_spo2(
@@ -240,4 +245,5 @@ async def test_spo2_failure_does_not_block_other_sensors(
     await _setup(hass, config_entry)
 
     assert _state(hass, "steps").state == str(summary["totalSteps"])
-    assert _state(hass, "acclimation_spo2_average").state == STATE_UNAVAILABLE
+    seven_days = _state(hass, "acclimation_spo2_seven_day_average")
+    assert seven_days.state == STATE_UNAVAILABLE

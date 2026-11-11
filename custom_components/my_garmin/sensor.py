@@ -1039,9 +1039,10 @@ def _spo2(
 
 
 SPO2_SENSORS: tuple[MyGarminSensorDescription, ...] = (
-    _spo2("acclimation_spo2_average", "averageSpO2", precision=1),
-    _spo2("acclimation_spo2_lowest", "lowestSpO2"),
-    _spo2("acclimation_spo2_latest", "latestSpO2"),
+    # The daily summary already shows the day's average, lowest and latest.
+    _spo2("acclimation_spo2_average", "averageSpO2", precision=1, enabled=False),
+    _spo2("acclimation_spo2_lowest", "lowestSpO2", enabled=False),
+    _spo2("acclimation_spo2_latest", "latestSpO2", enabled=False),
     _spo2("acclimation_spo2_seven_day_average", "lastSevenDaysAvgSpO2", precision=1),
     _spo2("acclimation_spo2_sleep_average", "avgSleepSpO2", precision=1),
     _spo2(
