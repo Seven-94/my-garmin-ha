@@ -311,6 +311,135 @@
           "stressful_awake": "Stressful (awake)",
           "very_stressful_awake": "Very stressful (awake)"
         }
+      },
+      "nap_time": {
+        "name": "Nap time"
+      },
+      "unmeasurable_sleep": {
+        "name": "Unmeasurable sleep"
+      },
+      "awake_count": {
+        "name": "Awakenings"
+      },
+      "sleep_stress": {
+        "name": "Sleep stress"
+      },
+      "sleep_heart_rate": {
+        "name": "Sleep heart rate"
+      },
+      "sleep_respiration": {
+        "name": "Sleep respiration rate"
+      },
+      "sleep_respiration_highest": {
+        "name": "Highest sleep respiration rate"
+      },
+      "sleep_respiration_lowest": {
+        "name": "Lowest sleep respiration rate"
+      },
+      "sleep_spo2": {
+        "name": "Sleep SpO2"
+      },
+      "sleep_spo2_lowest": {
+        "name": "Lowest sleep SpO2"
+      },
+      "sleep_spo2_highest": {
+        "name": "Highest sleep SpO2"
+      },
+      "sleep_spo2_heart_rate": {
+        "name": "Heart rate during SpO2 readings"
+      },
+      "sleep_spo2_events": {
+        "name": "SpO2 readings below threshold"
+      },
+      "rem_sleep_percentage": {
+        "name": "REM sleep share"
+      },
+      "light_sleep_percentage": {
+        "name": "Light sleep share"
+      },
+      "deep_sleep_percentage": {
+        "name": "Deep sleep share"
+      },
+      "sleep_need": {
+        "name": "Sleep need"
+      },
+      "next_sleep_need": {
+        "name": "Next sleep need"
+      },
+      "sleep_alignment": {
+        "name": "Sleep alignment"
+      },
+      "sleep_duration_rating": {
+        "name": "Sleep duration rating",
+        "state": {
+          "excellent": "Excellent",
+          "good": "Good",
+          "fair": "Fair",
+          "poor": "Poor"
+        }
+      },
+      "sleep_stress_rating": {
+        "name": "Sleep stress rating",
+        "state": {
+          "excellent": "Excellent",
+          "good": "Good",
+          "fair": "Fair",
+          "poor": "Poor"
+        }
+      },
+      "awake_count_rating": {
+        "name": "Awakenings rating",
+        "state": {
+          "excellent": "Excellent",
+          "good": "Good",
+          "fair": "Fair",
+          "poor": "Poor"
+        }
+      },
+      "rem_sleep_rating": {
+        "name": "REM sleep rating",
+        "state": {
+          "excellent": "Excellent",
+          "good": "Good",
+          "fair": "Fair",
+          "poor": "Poor"
+        }
+      },
+      "light_sleep_rating": {
+        "name": "Light sleep rating",
+        "state": {
+          "excellent": "Excellent",
+          "good": "Good",
+          "fair": "Fair",
+          "poor": "Poor"
+        }
+      },
+      "deep_sleep_rating": {
+        "name": "Deep sleep rating",
+        "state": {
+          "excellent": "Excellent",
+          "good": "Good",
+          "fair": "Fair",
+          "poor": "Poor"
+        }
+      },
+      "restlessness_rating": {
+        "name": "Restlessness rating",
+        "state": {
+          "excellent": "Excellent",
+          "good": "Good",
+          "fair": "Fair",
+          "poor": "Poor"
+        }
+      },
+      "breathing_disruption": {
+        "name": "Breathing disruptions",
+        "state": {
+          "none": "None",
+          "low": "Low",
+          "medium": "Medium",
+          "high": "High"
+        }
       }
     }
   }

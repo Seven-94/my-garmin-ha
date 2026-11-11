@@ -2,7 +2,7 @@
 
 import logging
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 from typing import Any, TypedDict, Unpack
 
@@ -52,6 +52,8 @@ STRESS_CATEGORIES = [
     "stressful_awake",
     "very_stressful_awake",
 ]
+BREATHING_DISRUPTIONS = ["none", "low", "medium", "high"]
+_NO_DATA = {"invalid", "unmeasurable"}
 # Unknown values are logged once per run, not at every refresh.
 _REPORTED_VALUES: set[tuple[str, str]] = set()
 
@@ -86,37 +88,56 @@ def _intensity_minutes(data: JsonObject) -> Number:
     return (moderate or 0) + 2 * (vigorous or 0)
 
 
-def _last_sync(data: JsonObject) -> StateValue:
-    value = data.get("lastSyncTimestampGMT")
+def _utc(value: object) -> datetime | None:
+    """A Garmin *GMT time: milliseconds since the epoch, or an ISO string."""
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int | float):
+        return datetime.fromtimestamp(value / 1000, tz=UTC) if value > 0 else None
     if not isinstance(value, str):
         return None
     parsed = dt_util.parse_datetime(value)
     if parsed is None:
         return None
-    # Garmin's *GMT fields carry no offset: they are UTC.
+    # Garmin's *GMT strings carry no offset: they are UTC.
     return parsed.replace(tzinfo=dt_util.UTC) if parsed.tzinfo is None else parsed
 
 
-def _epoch_ms(key: str) -> Callable[[JsonObject], StateValue]:
-    """Read a *GMT timestamp sent in milliseconds since the epoch."""
+def _last_sync(data: JsonObject) -> StateValue:
+    return _utc(data.get("lastSyncTimestampGMT"))
 
+
+def _timestamp(key: str) -> Callable[[JsonObject], StateValue]:
     def read(data: JsonObject) -> StateValue:
-        value = _measure(key, zero_is_missing=True)(data)
-        if value is None:
-            return None
-        return datetime.fromtimestamp(value / 1000, tz=UTC)
+        return _utc(data.get(key))
 
     return read
 
 
-def _overall_score(data: JsonObject) -> dict[str, Any]:
-    scores = data.get("sleepScores")
-    overall = scores.get("overall") if isinstance(scores, dict) else None
-    return overall if isinstance(overall, dict) else {}
+def _nested(data: JsonObject, key: str) -> dict[str, Any]:
+    value = data.get(key)
+    return value if isinstance(value, dict) else {}
+
+
+def _clock(minutes: object) -> str | None:
+    """Minutes around midnight as HH:MM; negative ones fall the evening before."""
+    if isinstance(minutes, bool) or not isinstance(minutes, int):
+        return None
+    minutes %= 24 * 60
+    return f"{minutes // 60:02d}:{minutes % 60:02d}"
+
+
+def _code(value: object) -> str | None:
+    """A Garmin code shown as an attribute, in Home Assistant's lower case."""
+    return value.lower() if isinstance(value, str) else None
+
+
+def _score_item(data: JsonObject, component: str) -> dict[str, Any]:
+    return _nested(_nested(data, "sleepScores"), component)
 
 
 def _sleep_score(data: JsonObject) -> StateValue:
-    return _measure("value", zero_is_missing=True)(_overall_score(data))
+    return _measure("value", zero_is_missing=True)(_score_item(data, "overall"))
 
 
 def _option(value: object, options: list[str], what: str) -> StateValue:
@@ -126,6 +147,9 @@ def _option(value: object, options: list[str], what: str) -> StateValue:
     option = value.lower()
     if option in options:
         return option
+    # Garmin's own way to say "no data", not a new value.
+    if option in _NO_DATA:
+        return None
     if (what, option) not in _REPORTED_VALUES:
         _REPORTED_VALUES.add((what, option))
         _LOGGER.warning("Unknown %s from Garmin: %s", what, value)
@@ -133,7 +157,7 @@ def _option(value: object, options: list[str], what: str) -> StateValue:
 
 
 def _sleep_quality(data: JsonObject) -> StateValue:
-    value = _overall_score(data).get("qualifierKey")
+    value = _score_item(data, "overall").get("qualifierKey")
     return _option(value, SLEEP_QUALITIES, "sleep quality")
 
 
@@ -409,35 +433,186 @@ SENSORS: tuple[MyGarminSensorDescription, ...] = (
 )
 
 
-def _sleep_duration(
-    key: str, field: str, suggested_unit: UnitOfTime, precision: int
+def _last_night(
+    description: MyGarminSensorDescription,
+    attributes_fn: Callable[[JsonObject], dict[str, Any]] = _night_of,
 ) -> MyGarminSensorDescription:
+    """A sleep sensor: it tells which night it shows."""
+    return replace(description, attributes_fn=attributes_fn)
+
+
+def _sleep_duration(
+    key: str,
+    field: str,
+    suggested_unit: UnitOfTime = UnitOfTime.MINUTES,
+    *,
+    enabled: bool = True,
+    attributes_fn: Callable[[JsonObject], dict[str, Any]] = _night_of,
+) -> MyGarminSensorDescription:
+    # A stage can genuinely last 0 s; a missing night is caught upstream.
+    return _last_night(
+        _number(
+            key,
+            field,
+            UnitOfTime.SECONDS,
+            device_class=SensorDeviceClass.DURATION,
+            suggested_unit=suggested_unit,
+            precision=1 if suggested_unit is UnitOfTime.HOURS else 0,
+            enabled=enabled,
+        ),
+        attributes_fn,
+    )
+
+
+def _naps(data: JsonObject) -> dict[str, Any]:
+    naps = data.get("dailyNapDTOS")
+    return {
+        **_night_of(data),
+        "naps": [
+            {
+                "start": _isoformat(_utc(nap.get("napStartTimestampGMT"))),
+                "end": _isoformat(_utc(nap.get("napEndTimestampGMT"))),
+                "duration": _measure("napTimeSec")(nap),
+            }
+            for nap in (naps if isinstance(naps, list) else [])
+            if isinstance(nap, dict)
+        ],
+    }
+
+
+def _isoformat(moment: datetime | None) -> str | None:
+    return moment.isoformat() if moment is not None else None
+
+
+def _score_feedback(data: JsonObject) -> dict[str, Any]:
+    return {
+        **_night_of(data),
+        "feedback": _code(data.get("sleepScoreFeedback")),
+        "insight": _code(data.get("sleepScoreInsight")),
+        "personalized_insight": _code(data.get("sleepScorePersonalizedInsight")),
+    }
+
+
+def _spo2_threshold(data: JsonObject) -> dict[str, Any]:
+    return {**_night_of(data), "threshold": _measure("spo2Threshold")(data)}
+
+
+def _breathing_disruption(data: JsonObject) -> StateValue:
+    return _option(
+        data.get("breathingDisruptionSeverity"),
+        BREATHING_DISRUPTIONS,
+        "breathing disruption severity",
+    )
+
+
+def _rating(key: str, component: str) -> MyGarminSensorDescription:
+    """The qualifier of one sleep score component, with its optimal range."""
+
+    def read(data: JsonObject) -> StateValue:
+        value = _score_item(data, component).get("qualifierKey")
+        return _option(value, SLEEP_QUALITIES, "sleep rating")
+
+    def attributes(data: JsonObject) -> dict[str, Any]:
+        item = _score_item(data, component)
+        return {
+            **_night_of(data),
+            "optimal_start": item.get("optimalStart"),
+            "optimal_end": item.get("optimalEnd"),
+        }
+
     return MyGarminSensorDescription(
         key=key,
         translation_key=key,
-        native_unit_of_measurement=UnitOfTime.SECONDS,
-        suggested_unit_of_measurement=suggested_unit,
-        suggested_display_precision=precision,
-        device_class=SensorDeviceClass.DURATION,
+        device_class=SensorDeviceClass.ENUM,
+        options=SLEEP_QUALITIES,
+        entity_registry_enabled_default=False,
+        value_fn=read,
+        attributes_fn=attributes,
+    )
+
+
+def _stage_percentage(key: str, component: str) -> MyGarminSensorDescription:
+    def read(data: JsonObject) -> StateValue:
+        return _measure("value")(_score_item(data, component))
+
+    return MyGarminSensorDescription(
+        key=key,
+        translation_key=key,
+        native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
-        # A stage can genuinely last 0 s; a missing night is caught upstream.
-        value_fn=_measure(field),
+        entity_registry_enabled_default=False,
+        value_fn=read,
         attributes_fn=_night_of,
     )
 
 
+def _sleep_need(key: str, field: str) -> MyGarminSensorDescription:
+    """Garmin's sleep need, in minutes, with the recommended bedtime."""
+
+    def read(data: JsonObject) -> StateValue:
+        return _measure("actual", zero_is_missing=True)(_nested(data, field))
+
+    def attributes(data: JsonObject) -> dict[str, Any]:
+        need = _nested(data, field)
+        return {
+            **_night_of(data),
+            "baseline": _measure("baseline", zero_is_missing=True)(need),
+            "recommended_bedtime_start": _clock(
+                need.get("recommendedBedtimeStartMins")
+            ),
+            "recommended_bedtime_end": _clock(need.get("recommendedBedtimeEndMins")),
+        }
+
+    return MyGarminSensorDescription(
+        key=key,
+        translation_key=key,
+        native_unit_of_measurement=UnitOfTime.MINUTES,
+        suggested_unit_of_measurement=UnitOfTime.HOURS,
+        suggested_display_precision=1,
+        device_class=SensorDeviceClass.DURATION,
+        state_class=SensorStateClass.MEASUREMENT,
+        value_fn=read,
+        attributes_fn=attributes,
+    )
+
+
+# Alignment attribute, Garmin field (signed minutes around midnight).
+_ALIGNMENT_TIMES = {
+    "optimal_window_start": "optimalSleepWindowStartMins",
+    "optimal_window_end": "optimalSleepWindowEndMins",
+    "optimal_window_midpoint": "optimalSleepWindowMidpointMins",
+    "last_sleep_midpoint": "lastSleepMidpointMins",
+}
+
+
+def _alignment_status(data: JsonObject) -> StateValue:
+    # Free text in the spec: no list of values to build an enum from.
+    return _code(_nested(data, "sleepAlignment").get("status"))
+
+
+def _alignment(data: JsonObject) -> dict[str, Any]:
+    alignment = _nested(data, "sleepAlignment")
+    times = {
+        name: _clock(alignment.get(field)) for name, field in _ALIGNMENT_TIMES.items()
+    }
+    return {**_night_of(data), **{k: v for k, v in times.items() if v is not None}}
+
+
 SLEEP_SENSORS: tuple[MyGarminSensorDescription, ...] = (
-    _sleep_duration("sleep_duration", "sleepTimeSeconds", UnitOfTime.HOURS, 1),
-    _sleep_duration("deep_sleep", "deepSleepSeconds", UnitOfTime.MINUTES, 0),
-    _sleep_duration("light_sleep", "lightSleepSeconds", UnitOfTime.MINUTES, 0),
-    _sleep_duration("rem_sleep", "remSleepSeconds", UnitOfTime.MINUTES, 0),
-    _sleep_duration("awake_time", "awakeSleepSeconds", UnitOfTime.MINUTES, 0),
+    _sleep_duration("sleep_duration", "sleepTimeSeconds", UnitOfTime.HOURS),
+    _sleep_duration("deep_sleep", "deepSleepSeconds"),
+    _sleep_duration("light_sleep", "lightSleepSeconds"),
+    _sleep_duration("rem_sleep", "remSleepSeconds"),
+    _sleep_duration("awake_time", "awakeSleepSeconds"),
+    _sleep_duration("nap_time", "napTimeSeconds", attributes_fn=_naps),
+    _sleep_duration("unmeasurable_sleep", "unmeasurableSleepSeconds", enabled=False),
+    _last_night(_number("awake_count", "awakeCount")),
     MyGarminSensorDescription(
         key="sleep_score",
         translation_key="sleep_score",
         state_class=SensorStateClass.MEASUREMENT,
         value_fn=_sleep_score,
-        attributes_fn=_night_of,
+        attributes_fn=_score_feedback,
     ),
     MyGarminSensorDescription(
         key="sleep_quality",
@@ -447,19 +622,78 @@ SLEEP_SENSORS: tuple[MyGarminSensorDescription, ...] = (
         value_fn=_sleep_quality,
         attributes_fn=_night_of,
     ),
+    _rating("sleep_duration_rating", "totalDuration"),
+    _rating("sleep_stress_rating", "stress"),
+    _rating("awake_count_rating", "awakeCount"),
+    _rating("rem_sleep_rating", "remPercentage"),
+    _rating("light_sleep_rating", "lightPercentage"),
+    _rating("deep_sleep_rating", "deepPercentage"),
+    _rating("restlessness_rating", "restlessness"),
+    _stage_percentage("rem_sleep_percentage", "remPercentage"),
+    _stage_percentage("light_sleep_percentage", "lightPercentage"),
+    _stage_percentage("deep_sleep_percentage", "deepPercentage"),
     MyGarminSensorDescription(
         key="bedtime",
         translation_key="bedtime",
         device_class=SensorDeviceClass.TIMESTAMP,
-        value_fn=_epoch_ms("sleepStartTimestampGMT"),
+        value_fn=_timestamp("sleepStartTimestampGMT"),
         attributes_fn=_night_of,
     ),
     MyGarminSensorDescription(
         key="wake_time",
         translation_key="wake_time",
         device_class=SensorDeviceClass.TIMESTAMP,
-        value_fn=_epoch_ms("sleepEndTimestampGMT"),
+        value_fn=_timestamp("sleepEndTimestampGMT"),
         attributes_fn=_night_of,
+    ),
+    # Stress: 0 is a genuine, calm reading.
+    _last_night(_number("sleep_stress", "avgSleepStress")),
+    _last_night(_reading("sleep_heart_rate", "avgHeartRate", UNIT_BPM)),
+    _last_night(_reading("sleep_respiration", "averageRespirationValue", UNIT_BREATHS)),
+    _last_night(
+        _reading(
+            "sleep_respiration_highest",
+            "highestRespirationValue",
+            UNIT_BREATHS,
+            enabled=False,
+        )
+    ),
+    _last_night(
+        _reading(
+            "sleep_respiration_lowest",
+            "lowestRespirationValue",
+            UNIT_BREATHS,
+            enabled=False,
+        )
+    ),
+    _last_night(_reading("sleep_spo2", "averageSpO2Value", PERCENTAGE)),
+    _last_night(_reading("sleep_spo2_lowest", "lowestSpO2Value", PERCENTAGE)),
+    _last_night(
+        _reading("sleep_spo2_highest", "highestSpO2Value", PERCENTAGE, enabled=False)
+    ),
+    _last_night(
+        _reading("sleep_spo2_heart_rate", "averageSpO2HRSleep", UNIT_BPM, enabled=False)
+    ),
+    _last_night(
+        _number("sleep_spo2_events", "numberOfEventsBelowThreshold", enabled=False),
+        _spo2_threshold,
+    ),
+    MyGarminSensorDescription(
+        key="breathing_disruption",
+        translation_key="breathing_disruption",
+        device_class=SensorDeviceClass.ENUM,
+        options=BREATHING_DISRUPTIONS,
+        value_fn=_breathing_disruption,
+        attributes_fn=_night_of,
+    ),
+    _sleep_need("sleep_need", "sleepNeed"),
+    _sleep_need("next_sleep_need", "nextSleepNeed"),
+    MyGarminSensorDescription(
+        key="sleep_alignment",
+        translation_key="sleep_alignment",
+        entity_registry_enabled_default=False,
+        value_fn=_alignment_status,
+        attributes_fn=_alignment,
     ),
 )
 

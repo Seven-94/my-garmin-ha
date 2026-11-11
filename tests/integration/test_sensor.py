@@ -212,6 +212,7 @@ async def test_rejected_key_during_refresh_starts_reauth(
         ("2026-11-10T06:15:00.123", "2026-11-10T06:15:00+00:00"),
         ("2026-11-10T07:15:00+01:00", "2026-11-10T06:15:00+00:00"),
         ("not a date", STATE_UNKNOWN),
+        (True, STATE_UNKNOWN),
         (None, STATE_UNKNOWN),
     ],
 )
@@ -220,7 +221,7 @@ async def test_last_sync_is_read_as_utc(
     mock_client: MagicMock,
     summary: dict[str, Any],
     config_entry: MockConfigEntry,
-    raw: str | None,
+    raw: object,
     expected: str,
 ) -> None:
     summary["lastSyncTimestampGMT"] = raw
