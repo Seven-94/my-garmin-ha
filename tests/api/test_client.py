@@ -195,6 +195,38 @@ async def test_weight_endpoints_without_data_return_an_empty_object(
         assert await client.get_weight_range(day, day) == {}
 
 
+ACTIVITIES_PATH = "/activitylist-service/activities/search/activities"
+
+
+async def test_get_activities_returns_the_latest_ones(
+    client: GarminPersonalClient, fake_garmin: FakeGarmin
+) -> None:
+    fake_garmin.data_replies[ACTIVITIES_PATH] = [Reply(body='[{"activityId": 1}]')]
+
+    assert await client.get_activities(10) == [{"activityId": 1}]
+    request = fake_garmin.requests[-1]
+    assert dict(request.query) == {"start": "0", "limit": "10"}
+
+
+@pytest.mark.parametrize("body", ["null", ""])
+async def test_get_activities_without_data_returns_an_empty_list(
+    client: GarminPersonalClient, fake_garmin: FakeGarmin, body: str
+) -> None:
+    fake_garmin.data_replies[ACTIVITIES_PATH] = [Reply(body=body)]
+
+    assert await client.get_activities(10) == []
+
+
+@pytest.mark.parametrize("body", ['{"activityId": 1}', "[1, 2]"])
+async def test_get_activities_rejects_anything_but_a_list_of_objects(
+    client: GarminPersonalClient, fake_garmin: FakeGarmin, body: str
+) -> None:
+    fake_garmin.data_replies[ACTIVITIES_PATH] = [Reply(body=body)]
+
+    with pytest.raises(GarminApiError):
+        await client.get_activities(10)
+
+
 @pytest.mark.parametrize("body", ["<html>", "[1, 2]", ""])
 async def test_payload_that_is_not_a_json_object_raises_api_error(
     client: GarminPersonalClient, fake_garmin: FakeGarmin, body: str

@@ -1,6 +1,7 @@
-"""Sensors: the daily summary, last night's sleep and HRV, and weight."""
+"""Sensors: daily summary, last night's sleep and HRV, weight, last activity."""
 
 import logging
+import re
 from collections.abc import Callable
 from dataclasses import dataclass, replace
 from datetime import UTC, datetime
@@ -902,6 +903,103 @@ WEIGHT_SENSORS: tuple[MyGarminSensorDescription, ...] = (
 )
 
 
+# Home Assistant states hold at most 255 characters.
+_MAX_STATE_LENGTH = 255
+# Social and profile data, places, and fields shown another way.
+_HIDDEN_ACTIVITY_FIELDS = {
+    "activityName",
+    "description",
+    "activityUUID",
+    "startLatitude",
+    "startLongitude",
+    "endLatitude",
+    "endLongitude",
+    "locationName",
+    "numberOfActivityLikes",
+    "numberOfActivityComments",
+    "likedByUser",
+    "commentedByUser",
+    "requestorRelationship",
+    "videoUrl",
+    "startTimeLocal",
+    "startTimeGMT",
+    "endTimeGMT",
+    "beginTimestamp",
+    # Same as their isX twin.
+    "parent",
+    "decoDive",
+    "elevationCorrected",
+    "pr",
+    "manualActivity",
+    "favorite",
+    "autoCalcCalories",
+}
+_HIDDEN_ACTIVITY_PREFIXES = ("owner", "activityLike")
+_CAMEL_BOUNDARY = re.compile(r"(?<=[a-z0-9])(?=[A-Z])")
+
+
+def _snake(key: str) -> str:
+    return _CAMEL_BOUNDARY.sub("_", key).lower()
+
+
+def last_activity(data: JsonObject) -> dict[str, Any]:
+    """The newest activity: the coordinator sorts them newest first."""
+    activities = data.get("activities")
+    if not isinstance(activities, list) or not activities:
+        return {}
+    first = activities[0]
+    return first if isinstance(first, dict) else {}
+
+
+def _activity_name(data: JsonObject) -> StateValue:
+    name = last_activity(data).get("activityName")
+    return name[:_MAX_STATE_LENGTH] if isinstance(name, str) else None
+
+
+def _iso(value: object) -> str | None:
+    moment = _utc(value)
+    return moment.isoformat() if moment else None
+
+
+def activity_summary(activity: JsonObject) -> dict[str, Any]:
+    """Who, what and when of an activity, for attributes and events."""
+    return {
+        "activity_id": activity.get("activityId"),
+        "activity_type": _nested(activity, "activityType").get("typeKey"),
+        "start": _iso(activity.get("startTimeGMT")),
+    }
+
+
+def _activity_attributes(data: JsonObject) -> dict[str, Any]:
+    """Every plain field of the summary, so no device-specific value is lost."""
+    activity = last_activity(data)
+    if not activity:
+        return {}
+    fields = {
+        _snake(key): value
+        for key, value in activity.items()
+        if isinstance(value, str | int | float)  # bool is an int
+        and key not in _HIDDEN_ACTIVITY_FIELDS
+        and not key.startswith(_HIDDEN_ACTIVITY_PREFIXES)
+    }
+    return {
+        **fields,
+        **activity_summary(activity),
+        "event_type": _nested(activity, "eventType").get("typeKey"),
+        "end": _iso(activity.get("endTimeGMT")),
+    }
+
+
+ACTIVITY_SENSORS: tuple[MyGarminSensorDescription, ...] = (
+    MyGarminSensorDescription(
+        key="last_activity",
+        translation_key="last_activity",
+        value_fn=_activity_name,
+        attributes_fn=_activity_attributes,
+    ),
+)
+
+
 async def async_setup_entry(
     hass: HomeAssistant,
     entry: MyGarminConfigEntry,
@@ -917,6 +1015,10 @@ async def async_setup_entry(
             *(
                 MyGarminSensor(data.weight, description)
                 for description in WEIGHT_SENSORS
+            ),
+            *(
+                MyGarminSensor(data.activities, description)
+                for description in ACTIVITY_SENSORS
             ),
         ]
     )
