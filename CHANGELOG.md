@@ -44,6 +44,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   bone mass, visceral fat, metabolic age and physique rating are disabled by
   default. Garmin sends masses in grams although its spec says kilograms: both
   are handled. Weight goal, with its low and high bounds disabled by default.
+- Last activity sensor: the activity name, with its type, start and end times
+  and every other summary field as attributes (social data and GPS positions
+  are left out). Refreshed after each watch sync and every hour.
+- New activity event, fired once per activity recorded while Home Assistant
+  runs; activities already known at start-up fire nothing. Activity names are
+  never logged.
 
 ### Changed
 

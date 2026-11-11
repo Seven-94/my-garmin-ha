@@ -498,6 +498,21 @@
       },
       "weight_goal_high": {
         "name": "Objectif de poids, borne haute"
+      },
+      "last_activity": {
+        "name": "Dernière activité"
+      }
+    },
+    "event": {
+      "new_activity": {
+        "name": "Nouvelle activité",
+        "state_attributes": {
+          "event_type": {
+            "state": {
+              "new_activity": "Nouvelle activité"
+            }
+          }
+        }
       }
     }
   }
