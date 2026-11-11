@@ -273,8 +273,16 @@ async def test_activity_names_are_never_logged(
     mock_client.get_activities.return_value = [new, *activities]
     await _refresh(hass, config_entry)
 
+    # Only this integration's records: Home Assistant core logs every state
+    # change at DEBUG level, and the sensor state is the name.
+    ours = "\n".join(
+        record.getMessage()
+        for record in caplog.records
+        if record.name.startswith("custom_components.my_garmin")
+    )
+    assert ours  # the integration did log, at DEBUG level
     for activity in (new, *activities):
-        assert activity["activityName"] not in caplog.text
+        assert activity["activityName"] not in ours
 
 
 async def test_a_new_watch_sync_refreshes_activities(
