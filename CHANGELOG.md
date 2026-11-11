@@ -29,6 +29,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   respiration and SpO2 details, hydration and wellness distance. Niche ones are
   disabled by default.
 - Jet lag binary sensor, with the trip name as an attribute.
+- Every other sleep field: naps (with their times as an attribute),
+  unmeasurable sleep, awakenings, sleep stress and heart rate, sleep
+  respiration and SpO2, breathing disruptions, sleep need for the current and
+  next night with the recommended bedtime, sleep alignment, score component
+  ratings and stage shares. Score feedback codes are attributes of the sleep
+  score.
 
 ### Changed
 

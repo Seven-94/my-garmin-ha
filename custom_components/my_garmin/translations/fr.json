@@ -311,6 +311,135 @@
           "stressful_awake": "Stressant (éveil)",
           "very_stressful_awake": "Très stressant (éveil)"
         }
+      },
+      "nap_time": {
+        "name": "Temps de sieste"
+      },
+      "unmeasurable_sleep": {
+        "name": "Sommeil non mesurable"
+      },
+      "awake_count": {
+        "name": "Réveils"
+      },
+      "sleep_stress": {
+        "name": "Stress pendant le sommeil"
+      },
+      "sleep_heart_rate": {
+        "name": "Fréquence cardiaque pendant le sommeil"
+      },
+      "sleep_respiration": {
+        "name": "Fréquence respiratoire pendant le sommeil"
+      },
+      "sleep_respiration_highest": {
+        "name": "Fréquence respiratoire maximale pendant le sommeil"
+      },
+      "sleep_respiration_lowest": {
+        "name": "Fréquence respiratoire minimale pendant le sommeil"
+      },
+      "sleep_spo2": {
+        "name": "SpO2 pendant le sommeil"
+      },
+      "sleep_spo2_lowest": {
+        "name": "SpO2 la plus basse pendant le sommeil"
+      },
+      "sleep_spo2_highest": {
+        "name": "SpO2 la plus haute pendant le sommeil"
+      },
+      "sleep_spo2_heart_rate": {
+        "name": "Fréquence cardiaque pendant les mesures de SpO2"
+      },
+      "sleep_spo2_events": {
+        "name": "Mesures de SpO2 sous le seuil"
+      },
+      "rem_sleep_percentage": {
+        "name": "Part de sommeil paradoxal"
+      },
+      "light_sleep_percentage": {
+        "name": "Part de sommeil léger"
+      },
+      "deep_sleep_percentage": {
+        "name": "Part de sommeil profond"
+      },
+      "sleep_need": {
+        "name": "Besoin de sommeil"
+      },
+      "next_sleep_need": {
+        "name": "Prochain besoin de sommeil"
+      },
+      "sleep_alignment": {
+        "name": "Alignement du sommeil"
+      },
+      "sleep_duration_rating": {
+        "name": "Évaluation de la durée du sommeil",
+        "state": {
+          "excellent": "Excellente",
+          "good": "Bonne",
+          "fair": "Moyenne",
+          "poor": "Mauvaise"
+        }
+      },
+      "sleep_stress_rating": {
+        "name": "Évaluation du stress pendant le sommeil",
+        "state": {
+          "excellent": "Excellente",
+          "good": "Bonne",
+          "fair": "Moyenne",
+          "poor": "Mauvaise"
+        }
+      },
+      "awake_count_rating": {
+        "name": "Évaluation des réveils",
+        "state": {
+          "excellent": "Excellente",
+          "good": "Bonne",
+          "fair": "Moyenne",
+          "poor": "Mauvaise"
+        }
+      },
+      "rem_sleep_rating": {
+        "name": "Évaluation du sommeil paradoxal",
+        "state": {
+          "excellent": "Excellente",
+          "good": "Bonne",
+          "fair": "Moyenne",
+          "poor": "Mauvaise"
+        }
+      },
+      "light_sleep_rating": {
+        "name": "Évaluation du sommeil léger",
+        "state": {
+          "excellent": "Excellente",
+          "good": "Bonne",
+          "fair": "Moyenne",
+          "poor": "Mauvaise"
+        }
+      },
+      "deep_sleep_rating": {
+        "name": "Évaluation du sommeil profond",
+        "state": {
+          "excellent": "Excellente",
+          "good": "Bonne",
+          "fair": "Moyenne",
+          "poor": "Mauvaise"
+        }
+      },
+      "restlessness_rating": {
+        "name": "Évaluation de l'agitation",
+        "state": {
+          "excellent": "Excellente",
+          "good": "Bonne",
+          "fair": "Moyenne",
+          "poor": "Mauvaise"
+        }
+      },
+      "breathing_disruption": {
+        "name": "Perturbations respiratoires",
+        "state": {
+          "none": "Aucune",
+          "low": "Faible",
+          "medium": "Moyenne",
+          "high": "Élevée"
+        }
       }
     }
   }
