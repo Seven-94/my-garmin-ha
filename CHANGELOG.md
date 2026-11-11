@@ -53,6 +53,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - API key expiry: a diagnostic date sensor, and a repair issue a week before
   the date the user entered (warning), turning into an error once it has
   passed. Reconfiguring with a new key and date removes it.
+- Watch sync overdue problem sensor: on when the last watch sync is older than
+  a threshold; the last sync seen is kept across midnight and restarts.
+- Options: sync overdue threshold (24 h by default) and daily summary refresh
+  interval (10 min by default); saving them reloads the integration.
 - Fitness age sensors, refreshed every six hours and after each watch sync:
   fitness age, with its components and last update as attributes; achievable
   and previous fitness age (previous one disabled by default); and the reason

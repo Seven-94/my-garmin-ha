@@ -19,16 +19,19 @@ from .api import (
     GarminRateLimitError,
     JsonObject,
 )
-from .const import DOMAIN
+from .const import (
+    CONF_DAILY_INTERVAL_MINUTES,
+    DEFAULT_DAILY_INTERVAL_MINUTES,
+    DOMAIN,
+)
 
 if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
 
 _LOGGER = logging.getLogger(__name__)
 
-# The summary is light and carries the last sync time: polled often, while
-# heavier data is fetched after a new watch sync.
-DAILY_INTERVAL = timedelta(minutes=10)
+# The summary is light and carries the last sync time: polled often (an
+# option), while heavier data is fetched after a new watch sync.
 # Safety net for data that may change without a watch sync, or a missed one.
 NIGHT_INTERVAL = timedelta(hours=2)
 # Scales upload weigh-ins on their own, without a watch sync.
@@ -97,7 +100,11 @@ class DailySummaryCoordinator(MyGarminCoordinator):
             entry,
             client,
             name="daily summary",
-            update_interval=DAILY_INTERVAL,
+            update_interval=timedelta(
+                minutes=entry.options.get(
+                    CONF_DAILY_INTERVAL_MINUTES, DEFAULT_DAILY_INTERVAL_MINUTES
+                )
+            ),
             fetch=client.get_daily_summary,
         )
 

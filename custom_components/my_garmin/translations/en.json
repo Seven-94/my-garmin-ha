@@ -62,6 +62,9 @@
             "name": "Trip"
           }
         }
+      },
+      "sync_overdue": {
+        "name": "Watch sync overdue"
       }
     },
     "sensor": {
@@ -545,6 +548,21 @@
     "key_expired": {
       "title": "Garmin API key has expired",
       "description": "The Garmin personal API key expired on {expires}: Garmin data is no longer updated. Create a new key in Garmin Connect, then enter it with its expiry date: Settings > Devices & services > My Garmin > Reconfigure."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Options",
+        "data": {
+          "sync_overdue_hours": "Sync overdue after",
+          "daily_interval_minutes": "Daily summary refresh interval"
+        },
+        "data_description": {
+          "sync_overdue_hours": "Hours without a watch sync before the problem sensor turns on.",
+          "daily_interval_minutes": "How often the daily summary, which carries the last sync time, is fetched. Garmin publishes no quota: keep it reasonable."
+        }
+      }
     }
   }
 }
