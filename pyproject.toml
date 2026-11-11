@@ -9,7 +9,7 @@ license = "MIT"
 license-files = ["LICENSE"]
 description = "Home Assistant custom integration for the official Garmin Connect Personal API"
 readme = "README.md"
-requires-python = ">=3.14"
+requires-python = ">=3.14.2"
 dependencies = []
 
 [dependency-groups]
@@ -28,7 +28,8 @@ dev = [
   # Provided by Home Assistant at runtime (manifest "requirements" stays empty):
   # needed here only for the tests and the type checker.
   "aiohttp>=3.14.5",
-  "pytest-asyncio>=1.4.1",
+  "pytest-asyncio>=1.4.0",
+  "pytest-homeassistant-custom-component>=0.13.375",
 ]
 
 [tool.pytest.ini_options]
@@ -59,6 +60,12 @@ exclude-newer = "14 days"
 # Not a distributable Python package: HACS ships custom_components/my_garmin/ as
 # is. uv only manages the development environment and does not install the project.
 package = false
+# Home Assistant depends on the uv Python package, which would put a second,
+# newer uv in .venv/bin and break required-version for every `uv run` (hooks,
+# CI). The tests never need it: an impossible marker drops it from the lock.
+# homeassistant 2026.10.4 pins pillow 12.3.0, which has known vulnerabilities
+# fixed in 13.0.0; the integration never uses pillow, so the tests take the fix.
+override-dependencies = ["uv; sys_platform == 'never'", "pillow>=13.0.0"]
 
 
 [tool.ruff]

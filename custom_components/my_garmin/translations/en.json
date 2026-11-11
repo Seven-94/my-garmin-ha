@@ -1,0 +1,56 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connect your Garmin account",
+        "description": "Create a personal API key in Garmin Connect (Settings > Personal API key) and paste it here. The key is shown only once by Garmin.",
+        "data": {
+          "api_key": "API key",
+          "key_expires": "Key expiry date"
+        },
+        "data_description": {
+          "api_key": "Your personal Garmin Connect API key. It is stored only in Home Assistant.",
+          "key_expires": "The expiry date Garmin shows for this key. Home Assistant warns you before it expires."
+        }
+      },
+      "reauth_confirm": {
+        "title": "Garmin key rejected",
+        "description": "Garmin no longer accepts the API key: it has expired or was deleted. Create a new key in Garmin Connect and enter it here.",
+        "data": {
+          "api_key": "API key",
+          "key_expires": "Key expiry date"
+        },
+        "data_description": {
+          "api_key": "The new personal Garmin Connect API key.",
+          "key_expires": "The expiry date Garmin shows for the new key."
+        }
+      },
+      "reconfigure": {
+        "title": "Update the Garmin key",
+        "description": "Enter the API key again, for example after creating a new one, and its expiry date.",
+        "data": {
+          "api_key": "API key",
+          "key_expires": "Key expiry date"
+        },
+        "data_description": {
+          "api_key": "Your personal Garmin Connect API key.",
+          "key_expires": "The expiry date Garmin shows for this key."
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Garmin rejected the API key. Check that you pasted it in full and that it has not been deleted.",
+      "cannot_connect": "Cannot reach Garmin right now. Try again in a few minutes.",
+      "expiry_in_past": "This date is in the past: the key has already expired.",
+      "no_profile_id": "Garmin accepted the key but did not return the account identifier. Try again later.",
+      "unknown": "Unexpected error. See the Home Assistant logs."
+    },
+    "abort": {
+      "single_instance_allowed": "A Garmin account is already configured.",
+      "already_configured": "This Garmin account is already configured.",
+      "reauth_successful": "The new key is saved.",
+      "reconfigure_successful": "The key is updated.",
+      "wrong_account": "This key belongs to another Garmin account than the one configured."
+    }
+  }
+}
