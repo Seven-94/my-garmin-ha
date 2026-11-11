@@ -65,10 +65,25 @@ class GarminPersonalClient:
             "/sleep-service/sleep/dailySleep", {"date": day.isoformat()}
         )
 
+    async def get_hrv(self, day: date) -> JsonObject:
+        """Heart rate variability of the night that ended on this day.
+
+        Empty when the device records no HRV: Garmin then answers a null body.
+        """
+        return await self._get_object(
+            f"/hrv-service/hrv/{day.isoformat()}", null_is_empty=True
+        )
+
     async def _get_object(
-        self, path: str, params: Mapping[str, str] | None = None
+        self,
+        path: str,
+        params: Mapping[str, str] | None = None,
+        *,
+        null_is_empty: bool = False,
     ) -> JsonObject:
         payload = await self.get(path, params)
+        if payload is None and null_is_empty:
+            return {}
         if not isinstance(payload, dict):
             raise GarminApiError(HTTPStatus.OK, f"Expected a JSON object from {path}")
         return payload

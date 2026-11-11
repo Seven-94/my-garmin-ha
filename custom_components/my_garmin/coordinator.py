@@ -30,7 +30,7 @@ _LOGGER = logging.getLogger(__name__)
 # heavier data is fetched after a new watch sync.
 DAILY_INTERVAL = timedelta(minutes=10)
 # Safety net for data that may change without a watch sync, or a missed one.
-SLEEP_INTERVAL = timedelta(hours=2)
+NIGHT_INTERVAL = timedelta(hours=2)
 # Garmin publishes no quota and may throttle without notice: after a 429, stay
 # away for at least this long, or longer if Garmin says so.
 RATE_LIMIT_BACKOFF = 30 * 60.0
@@ -94,16 +94,58 @@ class DailySummaryCoordinator(MyGarminCoordinator):
         )
 
 
+def _positive(value: object) -> bool:
+    return isinstance(value, int | float) and not isinstance(value, bool) and value > 0
+
+
 def has_night(data: JsonObject | None) -> bool:
     """Whether a sleep response holds a recorded night."""
-    if not data:
-        return False
-    seconds = data.get("sleepTimeSeconds")
-    return isinstance(seconds, int | float) and seconds > 0
+    return bool(data) and _positive((data or {}).get("sleepTimeSeconds"))
 
 
-class SleepCoordinator(MyGarminCoordinator):
-    """Last night, refreshed after a sync and every two hours."""
+def has_hrv(data: JsonObject | None) -> bool:
+    """Whether an HRV response holds a recorded night."""
+    summary = (data or {}).get("hrvSummary")
+    return isinstance(summary, dict) and _positive(summary.get("lastNightAvg"))
+
+
+class LastNightCoordinator(MyGarminCoordinator):
+    """Last night, refreshed after a sync and every two hours.
+
+    Before the morning sync, today's night is empty: the last recorded one
+    stays shown (its date is exposed) instead of going back to unknown.
+    """
+
+    def __init__(
+        self,
+        hass: HomeAssistant,
+        entry: ConfigEntry[MyGarminData],
+        client: GarminPersonalClient,
+        *,
+        name: str,
+        fetch: Callable[[date], Awaitable[JsonObject]],
+        has_data: Callable[[JsonObject | None], bool],
+    ) -> None:
+        super().__init__(
+            hass,
+            entry,
+            client,
+            name=name,
+            update_interval=NIGHT_INTERVAL,
+            fetch=self._async_fetch_night,
+        )
+        self._fetch_night = fetch
+        self._has_data = has_data
+
+    async def _async_fetch_night(self, day: date) -> JsonObject:
+        night = await self._fetch_night(day)
+        if not self._has_data(night) and self._has_data(self.data):
+            return self.data
+        return night
+
+
+class SleepCoordinator(LastNightCoordinator):
+    """Last night's sleep."""
 
     def __init__(
         self,
@@ -116,17 +158,28 @@ class SleepCoordinator(MyGarminCoordinator):
             entry,
             client,
             name="sleep",
-            update_interval=SLEEP_INTERVAL,
-            fetch=self._async_fetch_night,
+            fetch=client.get_daily_sleep,
+            has_data=has_night,
         )
 
-    async def _async_fetch_night(self, day: date) -> JsonObject:
-        night = await self.client.get_daily_sleep(day)
-        # Before the morning sync, today's night is empty: keep showing the last
-        # recorded one (its date is exposed) instead of going back to unknown.
-        if not has_night(night) and has_night(self.data):
-            return self.data
-        return night
+
+class HrvCoordinator(LastNightCoordinator):
+    """Last night's heart rate variability; empty for devices without HRV."""
+
+    def __init__(
+        self,
+        hass: HomeAssistant,
+        entry: ConfigEntry[MyGarminData],
+        client: GarminPersonalClient,
+    ) -> None:
+        super().__init__(
+            hass,
+            entry,
+            client,
+            name="HRV",
+            fetch=client.get_hrv,
+            has_data=has_hrv,
+        )
 
 
 def _last_sync(coordinator: DailySummaryCoordinator) -> object:
@@ -164,3 +217,4 @@ class MyGarminData:
     client: GarminPersonalClient
     daily: DailySummaryCoordinator
     sleep: SleepCoordinator
+    hrv: HrvCoordinator

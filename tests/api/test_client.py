@@ -19,6 +19,7 @@ from tests.api.fake_garmin import FAKE_API_KEY, FakeClock, FakeGarmin, Reply
 
 PROFILE_PATH = "/userprofile-service/userprofile/settings"
 DAILY_PATH = "/usersummary-service/usersummary/daily"
+HRV_PATH = "/hrv-service/hrv/2026-11-10"
 
 
 async def test_get_user_profile_returns_the_json_object(
@@ -124,6 +125,33 @@ async def test_http_error_raises_api_error_with_status(
     with pytest.raises(GarminApiError) as err:
         await client.get_user_profile()
     assert err.value.status == status
+
+
+async def test_get_hrv_puts_the_date_in_the_path(
+    client: GarminPersonalClient,
+) -> None:
+    night = await client.get_hrv(date(2026, 11, 10))
+
+    assert night == {"path": "/hrv-service/hrv/2026-11-10", "query": {}}
+
+
+@pytest.mark.parametrize("body", ["null", ""])
+async def test_get_hrv_without_data_returns_an_empty_object(
+    client: GarminPersonalClient, fake_garmin: FakeGarmin, body: str
+) -> None:
+    # Devices that record no HRV get HTTP 200 with a null body.
+    fake_garmin.data_replies[HRV_PATH] = [Reply(body=body)]
+
+    assert await client.get_hrv(date(2026, 11, 10)) == {}
+
+
+async def test_get_hrv_rejects_a_payload_that_is_not_an_object(
+    client: GarminPersonalClient, fake_garmin: FakeGarmin
+) -> None:
+    fake_garmin.data_replies[HRV_PATH] = [Reply(body="[1, 2]")]
+
+    with pytest.raises(GarminApiError):
+        await client.get_hrv(date(2026, 11, 10))
 
 
 @pytest.mark.parametrize("body", ["<html>", "[1, 2]", ""])

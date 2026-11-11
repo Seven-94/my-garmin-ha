@@ -1,4 +1,4 @@
-"""Sensors: the daily summary, and last night."""
+"""Sensors: the daily summary, last night's sleep and heart rate variability."""
 
 import logging
 from collections.abc import Callable
@@ -53,6 +53,7 @@ STRESS_CATEGORIES = [
     "very_stressful_awake",
 ]
 BREATHING_DISRUPTIONS = ["none", "low", "medium", "high"]
+HRV_STATUSES = ["none", "poor", "low", "unbalanced", "balanced"]
 _NO_DATA = {"invalid", "unmeasurable"}
 # Unknown values are logged once per run, not at every refresh.
 _REPORTED_VALUES: set[tuple[str, str]] = set()
@@ -698,6 +699,72 @@ SLEEP_SENSORS: tuple[MyGarminSensorDescription, ...] = (
 )
 
 
+def _hrv_summary(data: JsonObject) -> dict[str, Any]:
+    # Unlike sleep, the HRV night and its date sit under hrvSummary.
+    return _nested(data, "hrvSummary")
+
+
+def _hrv_night_of(data: JsonObject) -> dict[str, Any]:
+    return {"night_of": _hrv_summary(data).get("calendarDate")}
+
+
+def _hrv(key: str, field: str, *, enabled: bool = True) -> MyGarminSensorDescription:
+    """An HRV value in milliseconds.
+
+    No device class: duration would let users convert HRV to hours.
+    """
+    read = _measure(field, zero_is_missing=True)
+    return MyGarminSensorDescription(
+        key=key,
+        translation_key=key,
+        native_unit_of_measurement=UnitOfTime.MILLISECONDS,
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_registry_enabled_default=enabled,
+        value_fn=lambda data: read(_hrv_summary(data)),
+        attributes_fn=_hrv_night_of,
+    )
+
+
+def _hrv_status(data: JsonObject) -> StateValue:
+    return _option(_hrv_summary(data).get("status"), HRV_STATUSES, "HRV status")
+
+
+_BASELINE_BOUNDS = {
+    "low_upper": "lowUpper",
+    "balanced_low": "balancedLow",
+    "balanced_upper": "balancedUpper",
+    "marker_value": "markerValue",
+}
+
+
+def _hrv_baseline(data: JsonObject) -> dict[str, Any]:
+    summary = _hrv_summary(data)
+    baseline = _nested(summary, "baseline")
+    bounds = {
+        name: _measure(field)(baseline) for name, field in _BASELINE_BOUNDS.items()
+    }
+    return {
+        **_hrv_night_of(data),
+        **{name: value for name, value in bounds.items() if value is not None},
+        "feedback": _code(summary.get("feedbackPhrase")),
+    }
+
+
+HRV_SENSORS: tuple[MyGarminSensorDescription, ...] = (
+    _hrv("hrv_last_night", "lastNightAvg"),
+    _hrv("hrv_weekly_average", "weeklyAvg"),
+    _hrv("hrv_last_night_high", "lastNight5MinHigh", enabled=False),
+    MyGarminSensorDescription(
+        key="hrv_status",
+        translation_key="hrv_status",
+        device_class=SensorDeviceClass.ENUM,
+        options=HRV_STATUSES,
+        value_fn=_hrv_status,
+        attributes_fn=_hrv_baseline,
+    ),
+)
+
+
 async def async_setup_entry(
     hass: HomeAssistant,
     entry: MyGarminConfigEntry,
@@ -709,6 +776,7 @@ async def async_setup_entry(
         [
             *(MyGarminSensor(data.daily, description) for description in SENSORS),
             *(MyGarminSensor(data.sleep, description) for description in SLEEP_SENSORS),
+            *(MyGarminSensor(data.hrv, description) for description in HRV_SENSORS),
         ]
     )
 
