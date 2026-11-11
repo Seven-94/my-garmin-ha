@@ -9,7 +9,8 @@ A Home Assistant custom integration that reads data from the official Garmin
 Connect Personal API. Read-only, one personal API key per user, few requests.
 
 Layout:
-- `src/my_garmin_ha/` — Python package (API client and shared code)
+- `custom_components/my_garmin/` — the integration, shipped as is by HACS
+  (domain `my_garmin`)
 - `tests/` — pytest suite, mirroring the source layout
 - `.github/` — CI workflow, Dependabot, issue and pull request templates
 
@@ -44,7 +45,8 @@ the commit: stage the changes and commit again.
 - Use `ty` for type checking. Type every function.
 - Comments explain why, not what.
 - Write code, comments, docs and commit messages in English.
-- The package version lives only in `src/my_garmin_ha/__init__.py`.
+- The integration version lives only in `custom_components/my_garmin/manifest.json`
+  (the `version` in `pyproject.toml` is a placeholder required by uv).
 
 ## Tests
 

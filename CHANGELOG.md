@@ -10,3 +10,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Project setup: tooling, CI, contribution and security guidelines.
+- Integration skeleton `custom_components/my_garmin` (manifest only).

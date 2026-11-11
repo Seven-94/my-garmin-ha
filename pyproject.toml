@@ -1,23 +1,16 @@
 [project]
 name = "my-garmin-ha"
 authors = [{ name = "Seven-94", email = "64831927+Seven-94@users.noreply.github.com" }]
-# PEP 639 SPDX expression. hatchling >= 1.27 supports it.
+# Placeholder required by uv. The integration version lives only in
+# custom_components/my_garmin/manifest.json.
+version = "0.0.0"
+# PEP 639 SPDX expression.
 license = "MIT"
 license-files = ["LICENSE"]
-# The version is read from src/my_garmin_ha/__init__.py (see [tool.hatch.version]).
-dynamic = ["version"]
 description = "Home Assistant custom integration for the official Garmin Connect Personal API"
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = []
-
-[build-system]
-requires = ["hatchling>=1.27"]
-build-backend = "hatchling.build"
-
-[tool.hatch.version]
-path = "src/my_garmin_ha/__init__.py"
-
 
 [dependency-groups]
 dev = [
@@ -36,11 +29,13 @@ dev = [
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# The integration is not an installed package: Home Assistant loads it from
+# custom_components/, so the tests import it from the repository root.
+pythonpath = ["."]
 addopts = "-v --cov --cov-report=term-missing"
 
 [tool.coverage.run]
-# Package name, not the path: the layout is src/my_garmin_ha/.
-source = ["my_garmin_ha"]
+source = ["custom_components/my_garmin"]
 branch = true
 
 [tool.coverage.report]
@@ -55,9 +50,9 @@ required-version = ">=0.12.10,<0.13"
 # Only resolve releases published more than 14 days ago (also accepts "2 weeks"
 # or the ISO 8601 form "P14D").
 exclude-newer = "14 days"
-# The version is read dynamically from __init__.py: rebuild the editable install
-# when it changes, so installed metadata never lags behind the source.
-cache-keys = [{ file = "pyproject.toml" }, { file = "src/my_garmin_ha/__init__.py" }]
+# Not a distributable Python package: HACS ships custom_components/my_garmin/ as
+# is. uv only manages the development environment and does not install the project.
+package = false
 
 
 [tool.ruff]
