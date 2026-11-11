@@ -52,9 +52,11 @@ the commit: stage the changes and commit again.
 ## Tests
 
 - No network access in tests: never call Garmin. Use fixtures.
-- Fixtures are real API responses anonymised before commit (profile IDs, names,
-  e-mails, GPS coordinates, shifted timestamps). Raw captures stay in the
-  ignored `captures/` directory.
+- Fixtures keep the shape of real API responses but no real data: identifiers,
+  names, e-mails, URLs, GPS and demographic fields are replaced, timestamps are
+  shifted, and every measurement is synthetic. Generate them with
+  `scripts/anonymise.py`; never commit a real measurement, even anonymised.
+  Raw captures stay in the ignored `captures/` directory.
 - Total branch coverage must stay at or above 80 % (`fail_under`).
 - `assert` is allowed in tests only (ruff S101 is ignored for `tests/`).
 

@@ -17,9 +17,21 @@ SHIFT = 28
 DAY_MS = 86_400_000
 
 
+def number(doc: Json, key: str, *indexes: int) -> float:
+    """Read a number from an anonymised document, checking the shapes on the way."""
+    assert isinstance(doc, dict)
+    value = doc[key]
+    for index in indexes:
+        assert isinstance(value, list)
+        value = value[index]
+    assert isinstance(value, int | float)
+    assert not isinstance(value, bool)
+    return float(value)
+
+
 @pytest.fixture
 def anonymiser() -> Anonymiser:
-    return Anonymiser(shift_days=SHIFT)
+    return Anonymiser(shift_days=SHIFT, seed="tests")
 
 
 def test_ids_are_replaced_consistently_across_documents(
@@ -104,30 +116,94 @@ def test_dates_and_timestamps_are_shifted(anonymiser: Anonymiser) -> None:
         }
     )
 
-    assert result == {
-        "calendarDate": "2026-12-08",
-        "startTimeLocal": "2026-12-08T06:12:00.0",
-        "startTimeGMT": "2026-12-08 05:12:00",
-        "lastSyncTimestampGMT": 1_794_290_000_000 + SHIFT * DAY_MS,
-        "startTimeInSeconds": 1_794_290_000 + SHIFT * 86_400,
-        "bodyBatteryValuesArray": [[1_794_290_000_000 + SHIFT * DAY_MS, 42]],
-    }
+    assert isinstance(result, dict)
+    assert result["calendarDate"] == "2026-12-08"
+    assert result["startTimeLocal"] == "2026-12-08T06:12:00.0"
+    assert result["startTimeGMT"] == "2026-12-08 05:12:00"
+    assert result["lastSyncTimestampGMT"] == 1_794_290_000_000 + SHIFT * DAY_MS
+    assert result["startTimeInSeconds"] == 1_794_290_000 + SHIFT * 86_400
+    shifted = 1_794_290_000_000 + SHIFT * DAY_MS
+    assert number(result, "bodyBatteryValuesArray", 0, 0) == shifted
+    # The level next to the timestamp is a measurement: synthetic.
+    assert number(result, "bodyBatteryValuesArray", 0, 1) != 42
 
 
-def test_measurements_and_durations_are_kept(anonymiser: Anonymiser) -> None:
+MEASUREMENTS: dict[str, int | float] = {
+    "totalSteps": 8421,
+    "restingHeartRate": 52,
+    "sleepTimeSeconds": 27_000,
+    "weight": 72_400.0,
+    "bmi": 23.4,
+    "bodyFat": 0.85,
+    "lastSevenDaysAvgRestingHeartRate": 1_000_000_000,
+}
+
+
+def test_measurements_are_replaced_by_synthetic_values(
+    anonymiser: Anonymiser,
+) -> None:
+    result = anonymiser.anonymise(dict(MEASUREMENTS))
+
+    assert isinstance(result, dict)
+    for key, original in MEASUREMENTS.items():
+        synthetic = result[key]
+        assert synthetic != original, key
+        assert type(synthetic) is type(original), key
+
+
+def test_synthetic_values_keep_the_scale_and_precision(
+    anonymiser: Anonymiser,
+) -> None:
+    # Same number of integer digits and decimals: grams stay grams, a
+    # percentage stays below 100, and parsers see the same formats.
+    result = anonymiser.anonymise(dict(MEASUREMENTS))
+
+    assert 1_000 <= number(result, "totalSteps") <= 9_999
+    assert 10 <= number(result, "restingHeartRate") <= 99
+    assert 10_000 <= number(result, "weight") < 100_000
+    assert number(result, "weight").is_integer()
+    assert 10 <= number(result, "bmi") < 100
+    assert round(number(result, "bmi"), 1) == number(result, "bmi")
+    assert 0 < number(result, "bodyFat") < 1
+
+
+def test_not_measured_markers_are_kept(anonymiser: Anonymiser) -> None:
+    # Garmin encodes "not measured" as null, 0 or a negative value.
+    result = anonymiser.anonymise(
+        {"weight": 0, "sleepTimeSeconds": None, "bodyBattery": -1, "spo2": 0.0}
+    )
+
+    assert isinstance(result, dict)
+    assert result["weight"] == 0
+    assert result["sleepTimeSeconds"] is None
+    assert result["spo2"] == 0.0
+    assert isinstance(result["bodyBattery"], int)
+    assert -9 <= result["bodyBattery"] <= -1
+
+
+def test_catalogue_numbers_and_settings_are_kept(anonymiser: Anonymiser) -> None:
     doc: Json = {
-        "totalSteps": 8421,
-        "restingHeartRate": 52,
-        "sleepTimeSeconds": 27_000,
-        "weight": 72_400.0,
-        "sleepScores": {"overall": {"value": 81, "qualifierKey": "GOOD"}},
+        "activityType": {"typeId": 1, "parentTypeId": 17, "typeKey": "running"},
+        "firstDayOfWeek": {"dayId": 3, "dayName": "monday", "sortOrder": 3},
+        "bodyBatteryValueDescriptorIndex": 1,
+        "bodyBatteryVersion": 2.0,
+        "fileFormat": {"formatId": 7, "formatKey": "fit"},
+        "sleepScores": {"overall": {"qualifierKey": "GOOD"}},
         "timeZone": "Europe/Paris",
-        "firstDayOfWeek": {"dayId": 3, "dayName": "monday"},
         "isValid": True,
         "nothing": None,
     }
 
     assert anonymiser.anonymise(doc) == doc
+
+
+def test_same_seed_gives_the_same_fixtures() -> None:
+    first = Anonymiser(shift_days=SHIFT, seed="a").anonymise(dict(MEASUREMENTS))
+    second = Anonymiser(shift_days=SHIFT, seed="a").anonymise(dict(MEASUREMENTS))
+    other = Anonymiser(shift_days=SHIFT, seed="b").anonymise(dict(MEASUREMENTS))
+
+    assert first == second
+    assert first != other
 
 
 def test_find_leaks_reports_paths_not_values(anonymiser: Anonymiser) -> None:

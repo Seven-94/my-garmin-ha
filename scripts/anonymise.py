@@ -12,12 +12,15 @@ reported by JSON path only, never by value.
 Rules, by key name: identifiers are renumbered consistently across files;
 names, e-mail addresses, URLs, GPS coordinates and demographic fields are
 replaced; every date and epoch timestamp is shifted by the same whole number of
-weeks. Measurements (steps, heart rate, weight...) are kept: the tests need
-real shapes and values, and without identifiers they are no longer linked to
-a person.
+weeks. Every measurement (steps, heart rate, weight, sleep...) is replaced by a
+synthetic value with the same type, sign, number of digits and decimals: no
+real health data reaches the repository, yet parsers see the same formats.
+Null, zero and negative values are kept, as Garmin uses them for "not
+measured"; so are catalogue numbers (type IDs, indexes, versions, formats).
 """
 
 import argparse
+import hashlib
 import json
 import logging
 import re
@@ -25,7 +28,9 @@ import secrets
 import sys
 from dataclasses import dataclass, field
 from datetime import date, timedelta
+from enum import Enum, auto
 from pathlib import Path
+from typing import Literal
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -41,6 +46,8 @@ _KEPT_NAME_KEY = re.compile(r"^dayName$")
 _URL_KEY = re.compile(r"[Uu]rl")
 _LATITUDE_KEY = re.compile(r"(?:[Ll]atitude|^lat$|Lat$)")
 _LONGITUDE_KEY = re.compile(r"(?:[Ll]ongitude|^lon$|^lng$|Lon$|Lng$)")
+# Numbers that describe the data rather than the body: kept as they are.
+_KEPT_NUMBER_KEY = re.compile(r"(?:[Tt]ype|[Ii]ndex|^sortOrder$|[Vv]ersion|[Ff]ormat)")
 _EPOCH_SECONDS_KEY = re.compile(r"(?i)(?:time|date|stamp|epoch|seconds)")
 _DATE_PREFIX = re.compile(r"^(\d{4}-\d{2}-\d{2})(?=$|[T ])")
 _DATE_ANYWHERE = re.compile(r"\d{4}-\d{2}-\d{2}")
@@ -69,15 +76,29 @@ _EPOCH_S = (1.0e9, 2.6e9)
 _MIN_SUBSTRING_LEN = 6
 # Small numeric "ids" are list indexes, not identifiers.
 _MIN_ID = 1_000
+_MAX_DECIMALS = 6
 
 CAPTURE_INDEX = "index.json"
 
 
+class _Rule(Enum):
+    NONE = auto()
+
+
+type _RuleResult = Json | Literal[_Rule.NONE]
+
+
 @dataclass
 class Anonymiser:
-    """Anonymises documents one after the other, with one consistent mapping."""
+    """Anonymises documents one after the other, with one consistent mapping.
+
+    The seed makes the synthetic measurements reproducible; it is unrelated to
+    the real values, which cannot be recovered from the output.
+    """
 
     shift_days: int
+    seed: str = ""
+    _draws: int = 0
     _ids: dict[int | str, int | str] = field(default_factory=dict)
     _originals: set[int | float | str] = field(default_factory=set)
     _original_dates: set[str] = field(default_factory=set)
@@ -102,15 +123,16 @@ class Anonymiser:
             return value
         if key is not None:
             replaced = self._by_key(key, value)
-            if replaced is not None:
-                self._remember(value)
+            if replaced is not _Rule.NONE:
+                if replaced != value:
+                    self._remember(value)
                 return replaced
         if isinstance(value, str):
             return self._string(value)
         return self._number(key, value)
 
-    def _by_key(self, key: str, value: int | float | str) -> Json:
-        """Return the replacement a key rule dictates, or None to go on."""
+    def _by_key(self, key: str, value: int | float | str) -> _RuleResult:
+        """Return the replacement a key rule dictates, or _Rule.NONE."""
         if key in DEMOGRAPHICS:
             return DEMOGRAPHICS[key]
         if _ID_KEY.search(key) and not _KEPT_ID_KEY.search(key):
@@ -127,13 +149,13 @@ class Anonymiser:
             return FAKE_LATITUDE
         if not isinstance(value, str) and _LONGITUDE_KEY.search(key):
             return FAKE_LONGITUDE
-        return None
+        return _Rule.NONE
 
     def _fake_id(self, value: int | float | str) -> Json:
         if isinstance(value, float) or (
             isinstance(value, int) and abs(value) < _MIN_ID
         ):
-            return None
+            return value
         if value not in self._ids:
             number = FIRST_FAKE_ID + len(self._ids)
             self._ids[value] = number if isinstance(value, int) else f"anon-{number}"
@@ -164,7 +186,37 @@ class Anonymiser:
         is_time_key = key is not None and _EPOCH_SECONDS_KEY.search(key)
         if is_time_key and _EPOCH_S[0] <= value <= _EPOCH_S[1]:
             return value + self.shift_days * 86_400
-        return value
+        if key is not None and _KEPT_NUMBER_KEY.search(key):
+            return value
+        return self._synthetic(value)
+
+    def _synthetic(self, value: int | float) -> int | float:
+        """A made-up value with the same type, sign, digits and decimals."""
+        if value == 0:
+            return value
+        sign = -1 if value < 0 else 1
+        magnitude = abs(value)
+        whole = int(magnitude)
+        low, high = (10 ** (len(str(whole)) - 1), 10 ** len(str(whole)))
+        if whole == 0:
+            low, high = 0, 1
+        decimals = 0 if isinstance(value, int) else _decimals(magnitude)
+        while True:
+            drawn = round(low + self._draw() * (high - low), decimals)
+            # Never 0 (that means "not measured"), never the original value.
+            if low <= drawn < high and drawn not in (0, magnitude):
+                break
+        if isinstance(value, int):
+            return sign * int(drawn)
+        return sign * float(drawn)
+
+    def _draw(self) -> float:
+        """A reproducible number in [0, 1), derived from the seed only."""
+        self._draws += 1
+        digest = hashlib.blake2b(
+            f"{self.seed}:{self._draws}".encode(), digest_size=8
+        ).digest()
+        return int.from_bytes(digest) / 2**64
 
     def leaks_in(self, doc: Json, path: str = "$") -> list[str]:
         """Return the JSON paths of the values that still hold an original."""
@@ -197,6 +249,13 @@ class Anonymiser:
         )
 
 
+def _decimals(value: float) -> int:
+    text = repr(value)
+    if value.is_integer() or "e" in text:
+        return 0
+    return min(len(text.split(".")[1]), _MAX_DECIMALS)
+
+
 def _is_distinctive(value: int | float) -> bool:
     return abs(value) >= _MIN_ID or (
         isinstance(value, float) and not value.is_integer()
@@ -220,10 +279,15 @@ def _keys(doc: Json) -> set[str]:
 
 
 def anonymise_directory(
-    captures: Path, fixtures: Path, *, shift_days: int
+    captures: Path, fixtures: Path, *, shift_days: int, seed: str | None = None
 ) -> list[str]:
-    """Anonymise every capture; write the fixtures only if no leak remains."""
-    anonymiser = Anonymiser(shift_days=shift_days)
+    """Anonymise every capture; write the fixtures only if no leak remains.
+
+    Without a seed, a fresh random one is used and never stored.
+    """
+    if seed is None:
+        seed = secrets.token_hex(16)
+    anonymiser = Anonymiser(shift_days=shift_days, seed=seed)
     raw = {
         path.name: json.loads(path.read_text(encoding="utf-8"))
         for path in sorted(captures.glob("*.json"))
