@@ -41,7 +41,7 @@ asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 
 [tool.coverage.run]
-source = ["custom_components/my_garmin"]
+source = ["custom_components/my_garmin", "scripts"]
 branch = true
 
 [tool.coverage.report]

@@ -62,12 +62,16 @@ class GarminPersonalClient:
     async def _get_object(
         self, path: str, params: Mapping[str, str] | None = None
     ) -> JsonObject:
-        payload = await self._get(path, params)
+        payload = await self.get(path, params)
         if not isinstance(payload, dict):
             raise GarminApiError(HTTPStatus.OK, f"Expected a JSON object from {path}")
         return payload
 
-    async def _get(self, path: str, params: Mapping[str, str] | None) -> object:
+    async def get(self, path: str, params: Mapping[str, str] | None = None) -> object:
+        """GET any endpoint and return the decoded JSON, whatever its shape.
+
+        For endpoints without a dedicated method, such as the fixture capture.
+        """
         token = await self._auth.async_get_token()
         try:
             return await self._get_with_token(path, params, token)

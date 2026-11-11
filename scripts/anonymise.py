@@ -1,0 +1,266 @@
+"""Turn raw Garmin captures into anonymised test fixtures.
+
+Usage, from the repository root:
+
+    uv run python -m scripts.anonymise
+
+Reads captures/*.json (ignored by Git), writes tests/fixtures/*.json and lists
+every JSON key seen in captures/keys.txt, so the rules can be reviewed. Nothing
+is written when a leak check finds an original value in the output; leaks are
+reported by JSON path only, never by value.
+
+Rules, by key name: identifiers are renumbered consistently across files;
+names, e-mail addresses, URLs, GPS coordinates and demographic fields are
+replaced; every date and epoch timestamp is shifted by the same whole number of
+weeks. Measurements (steps, heart rate, weight...) are kept: the tests need
+real shapes and values, and without identifiers they are no longer linked to
+a person.
+"""
+
+import argparse
+import json
+import logging
+import re
+import secrets
+import sys
+from dataclasses import dataclass, field
+from datetime import date, timedelta
+from pathlib import Path
+
+_LOGGER = logging.getLogger(__name__)
+
+type Json = bool | int | float | str | list[Json] | dict[str, Json] | None
+
+# camelCase identifiers: profileId, activityId, userProfilePK, uuid...
+_ID_KEY = re.compile(r"(?:^id$|Id$|ID$|PK$|Pk$|^uuid$|Uuid$|[Ss]erial)")
+# Catalogue values (activityTypeId, timeZoneId) are not personal.
+_KEPT_ID_KEY = re.compile(r"[Tt]ype|[Tt]imeZone")
+_NAME_KEY = re.compile(r"(?:[Nn]ame$|^email|[Ee]mail[A-Z]|^description$|^notes?$)")
+_URL_KEY = re.compile(r"[Uu]rl")
+_LATITUDE_KEY = re.compile(r"(?:[Ll]atitude|^lat$|Lat$)")
+_LONGITUDE_KEY = re.compile(r"(?:[Ll]ongitude|^lon$|^lng$|Lon$|Lng$)")
+_EPOCH_SECONDS_KEY = re.compile(r"(?i)(?:time|date|stamp|epoch|seconds)")
+_DATE_PREFIX = re.compile(r"^(\d{4}-\d{2}-\d{2})(?=$|[T ])")
+_DATE_ANYWHERE = re.compile(r"\d{4}-\d{2}-\d{2}")
+_EMAIL = re.compile(r"[\w.+-]+@[\w-]+(?:\.[\w-]+)+")
+
+DEMOGRAPHICS: dict[str, Json] = {
+    "birthDate": "1985-06-15",
+    "gender": "FEMALE",
+    "height": 170.0,
+}
+FAKE_NAME = "Anonymised"
+FAKE_EMAIL = "user@example.com"
+FAKE_URL = "https://example.com/anonymised"
+# Royal Observatory, Greenwich: an obviously public, made-up location.
+FAKE_LATITUDE = 51.4779
+FAKE_LONGITUDE = -0.0015
+FIRST_FAKE_ID = 10_000_000
+
+# Epoch ranges between 2001 and 2052: no step count or duration reaches them.
+_EPOCH_MS = (1.0e12, 2.6e12)
+_EPOCH_S = (1.0e9, 2.6e9)
+# Shorter strings are checked for exact matches only, or every short word
+# would count as a leak.
+_MIN_SUBSTRING_LEN = 6
+# Small numeric "ids" are list indexes, not identifiers.
+_MIN_ID = 1_000
+
+CAPTURE_INDEX = "index.json"
+
+
+@dataclass
+class Anonymiser:
+    """Anonymises documents one after the other, with one consistent mapping."""
+
+    shift_days: int
+    _ids: dict[int | str, int | str] = field(default_factory=dict)
+    _originals: set[int | float | str] = field(default_factory=set)
+    _original_dates: set[str] = field(default_factory=set)
+
+    def __post_init__(self) -> None:
+        if self.shift_days == 0 or self.shift_days % 7:
+            msg = (
+                "shift_days must be a non-zero number of whole weeks, "
+                f"not {self.shift_days}"
+            )
+            raise ValueError(msg)
+
+    def anonymise(self, doc: Json) -> Json:
+        return self._walk(None, doc)
+
+    def _walk(self, key: str | None, value: Json) -> Json:
+        if isinstance(value, dict):
+            return {k: self._walk(k, v) for k, v in value.items()}
+        if isinstance(value, list):
+            return [self._walk(key, v) for v in value]
+        if value is None or isinstance(value, bool):
+            return value
+        if key is not None:
+            replaced = self._by_key(key, value)
+            if replaced is not None:
+                self._remember(value)
+                return replaced
+        if isinstance(value, str):
+            return self._string(value)
+        return self._number(key, value)
+
+    def _by_key(self, key: str, value: int | float | str) -> Json:
+        """Return the replacement a key rule dictates, or None to go on."""
+        if key in DEMOGRAPHICS:
+            return DEMOGRAPHICS[key]
+        if _ID_KEY.search(key) and not _KEPT_ID_KEY.search(key):
+            return self._fake_id(value)
+        if isinstance(value, str) and _NAME_KEY.search(key):
+            return FAKE_NAME
+        if isinstance(value, str) and _URL_KEY.search(key):
+            return FAKE_URL
+        if not isinstance(value, str) and _LATITUDE_KEY.search(key):
+            return FAKE_LATITUDE
+        if not isinstance(value, str) and _LONGITUDE_KEY.search(key):
+            return FAKE_LONGITUDE
+        return None
+
+    def _fake_id(self, value: int | float | str) -> Json:
+        if isinstance(value, float) or (
+            isinstance(value, int) and abs(value) < _MIN_ID
+        ):
+            return None
+        if value not in self._ids:
+            number = FIRST_FAKE_ID + len(self._ids)
+            self._ids[value] = number if isinstance(value, int) else f"anon-{number}"
+        return self._ids[value]
+
+    def _remember(self, value: int | float | str) -> None:
+        self._originals.add(value)
+        if isinstance(value, str):
+            self._original_dates.update(_DATE_ANYWHERE.findall(value))
+
+    def _string(self, value: str) -> str:
+        self._original_dates.update(_DATE_ANYWHERE.findall(value))
+        for email in _EMAIL.findall(value):
+            self._originals.add(email)
+        value = _EMAIL.sub(FAKE_EMAIL, value)
+        match = _DATE_PREFIX.match(value)
+        if match is None:
+            return value
+        shifted = date.fromisoformat(match[1]) + timedelta(days=self.shift_days)
+        return shifted.isoformat() + value[match.end() :]
+
+    def _number(self, key: str | None, value: int | float) -> int | float:
+        if _EPOCH_MS[0] <= value <= _EPOCH_MS[1]:
+            return value + self.shift_days * 86_400_000
+        is_time_key = key is not None and _EPOCH_SECONDS_KEY.search(key)
+        if is_time_key and _EPOCH_S[0] <= value <= _EPOCH_S[1]:
+            return value + self.shift_days * 86_400
+        return value
+
+    def leaks_in(self, doc: Json, path: str = "$") -> list[str]:
+        """Return the JSON paths of the values that still hold an original."""
+        if isinstance(doc, dict):
+            return [
+                leak for k, v in doc.items() for leak in self.leaks_in(v, f"{path}.{k}")
+            ]
+        if isinstance(doc, list):
+            return [
+                leak
+                for i, v in enumerate(doc)
+                for leak in self.leaks_in(v, f"{path}[{i}]")
+            ]
+        if doc is None or isinstance(doc, bool):
+            return []
+        return [path] if self._is_original(doc) else []
+
+    def _is_original(self, value: int | float | str) -> bool:
+        if value in self._originals:
+            return True
+        if not isinstance(value, str):
+            return False
+        if any(date_ in value for date_ in self._original_dates):
+            return True
+        return any(
+            isinstance(original, str)
+            and len(original) >= _MIN_SUBSTRING_LEN
+            and original in value
+            for original in self._originals
+        )
+
+
+def find_leaks(anonymiser: Anonymiser, docs: dict[str, Json]) -> list[str]:
+    return [
+        f"{name}: {leak}"
+        for name, doc in docs.items()
+        for leak in anonymiser.leaks_in(doc)
+    ]
+
+
+def _keys(doc: Json) -> set[str]:
+    if isinstance(doc, dict):
+        return set(doc) | {k for v in doc.values() for k in _keys(v)}
+    if isinstance(doc, list):
+        return {k for v in doc for k in _keys(v)}
+    return set()
+
+
+def anonymise_directory(
+    captures: Path, fixtures: Path, *, shift_days: int
+) -> list[str]:
+    """Anonymise every capture; write the fixtures only if no leak remains."""
+    anonymiser = Anonymiser(shift_days=shift_days)
+    raw = {
+        path.name: json.loads(path.read_text(encoding="utf-8"))
+        for path in sorted(captures.glob("*.json"))
+        if path.name != CAPTURE_INDEX
+    }
+    keys = set().union(*(_keys(doc) for doc in raw.values()))
+    (captures / "keys.txt").write_text("\n".join(sorted(keys)) + "\n", encoding="utf-8")
+
+    # Every capture is anonymised before any check, so that a value replaced in
+    # one file is also caught where it appears unreplaced in another.
+    anonymised = {name: anonymiser.anonymise(doc) for name, doc in raw.items()}
+    leaks = find_leaks(anonymiser, anonymised)
+    if leaks:
+        return leaks
+
+    fixtures.mkdir(parents=True, exist_ok=True)
+    for name, doc in anonymised.items():
+        text = json.dumps(doc, indent=2, ensure_ascii=False) + "\n"
+        (fixtures / name).write_text(text, encoding="utf-8")
+    return []
+
+
+def _random_shift() -> int:
+    # One to two years back, so that a shifted date never lands on another
+    # captured date (captures span at most a few weeks), and the real dates
+    # cannot be guessed from the fixtures.
+    return -7 * (53 + secrets.randbelow(52))
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument("--captures", type=Path, default=Path("captures"))
+    parser.add_argument("--fixtures", type=Path, default=Path("tests/fixtures"))
+    parser.add_argument(
+        "--shift-days",
+        type=int,
+        default=None,
+        help="whole weeks, in days (default: a random 1 to 2 years back)",
+    )
+    args = parser.parse_args(argv)
+    logging.basicConfig(level=logging.INFO, format="%(message)s")
+
+    shift = args.shift_days if args.shift_days is not None else _random_shift()
+    leaks = anonymise_directory(args.captures, args.fixtures, shift_days=shift)
+    if leaks:
+        _LOGGER.error("Nothing written: original values remain at")
+        for leak in leaks:
+            _LOGGER.error("  %s", leak)
+        _LOGGER.error("Add a rule for these keys, then run again.")
+        return 1
+    _LOGGER.info("Fixtures written to %s", args.fixtures)
+    _LOGGER.info("Review them, and the key list in %s/keys.txt", args.captures)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

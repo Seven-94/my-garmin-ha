@@ -11,6 +11,7 @@ Connect Personal API. Read-only, one personal API key per user, few requests.
 Layout:
 - `custom_components/my_garmin/` — the integration, shipped as is by HACS
   (domain `my_garmin`)
+- `scripts/` — developer tools: fixture capture and anonymisation
 - `tests/` — pytest suite, mirroring the source layout
 - `.github/` — CI workflow, Dependabot, issue and pull request templates
 
