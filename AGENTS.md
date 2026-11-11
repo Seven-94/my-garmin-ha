@@ -15,6 +15,19 @@ Layout:
 - `tests/` — pytest suite, mirroring the source layout
 - `.github/` — CI workflow, Dependabot, issue and pull request templates
 
+## Architecture
+
+- `api/client.py`: `GarminPersonalClient`, one method per endpoint. Endpoints
+  that answer a `null` body when there is no data (HRV) return `{}`.
+- `coordinator.py`: `DailySummaryCoordinator` (every 10 min) carries the last
+  sync time; `SyncWatcher` refreshes the other coordinators when it changes.
+  `LastNightCoordinator` (sleep, HRV) keeps the last recorded night. Only the
+  daily summary blocks the set-up.
+- `sensor.py`: one `MyGarminSensorDescription` tuple per coordinator, built
+  with helpers (`_measure`, `_reading`, `_option`…).
+- `translations/en.json` and `fr.json`: every `translation_key` and every enum
+  option needs an entry in both files.
+
 ## Setup
 
 ```bash
@@ -60,6 +73,18 @@ the commit: stage the changes and commit again.
   Raw captures stay in the ignored `captures/` directory.
 - Total branch coverage must stay at or above 80 % (`fail_under`).
 - `assert` is allowed in tests only (ruff S101 is ignored for `tests/`).
+
+## Gotchas
+
+- A `null` or empty answer means "no data": entities show unknown, never an
+  error or a repeated log.
+- Check allowed state classes per device class in Home Assistant's
+  `DEVICE_CLASS_STATE_CLASSES` before choosing one.
+- The test plugin pins an older Home Assistant than current releases; config
+  flow schemas use `probatio`, not voluptuous.
+- The Home Assistant test plugin blocks sockets: the `fake_garmin` fixture
+  requests `socket_enabled`, and any new fake-server fixture must too.
+- `prek run --all-files` checks tracked files only: `git add` new files first.
 
 ## Commits and pull requests
 
