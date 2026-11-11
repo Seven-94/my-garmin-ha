@@ -59,6 +59,12 @@ class GarminPersonalClient:
             {"calendarDate": day.isoformat()},
         )
 
+    async def get_daily_sleep(self, day: date) -> JsonObject:
+        """The night that ended on this day: Garmin dates a night by its wake-up."""
+        return await self._get_object(
+            "/sleep-service/sleep/dailySleep", {"date": day.isoformat()}
+        )
+
     async def _get_object(
         self, path: str, params: Mapping[str, str] | None = None
     ) -> JsonObject:

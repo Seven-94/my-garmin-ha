@@ -19,3 +19,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Daily summary sensors, refreshed every 10 minutes: steps, step goal,
   distance, calories, intensity minutes, floors, heart rate, stress, Body
   Battery, respiration, SpO2 and last sync.
+- Sleep sensors (duration, stages, score, quality, bedtime, wake-up time),
+  refreshed after each watch sync; last night stays shown until the next one
+  is recorded.

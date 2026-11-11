@@ -35,6 +35,17 @@ async def test_get_daily_summary_sends_the_calendar_date(
     assert summary == {"path": DAILY_PATH, "query": {"calendarDate": "2026-11-10"}}
 
 
+async def test_get_daily_sleep_sends_the_wake_up_date(
+    client: GarminPersonalClient,
+) -> None:
+    night = await client.get_daily_sleep(date(2026, 11, 10))
+
+    assert night == {
+        "path": "/sleep-service/sleep/dailySleep",
+        "query": {"date": "2026-11-10"},
+    }
+
+
 async def test_get_returns_any_json_shape(
     client: GarminPersonalClient, fake_garmin: FakeGarmin
 ) -> None:

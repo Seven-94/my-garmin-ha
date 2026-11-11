@@ -105,6 +105,39 @@
       },
       "last_sync": {
         "name": "Last sync"
+      },
+      "sleep_duration": {
+        "name": "Sleep duration"
+      },
+      "deep_sleep": {
+        "name": "Deep sleep"
+      },
+      "light_sleep": {
+        "name": "Light sleep"
+      },
+      "rem_sleep": {
+        "name": "REM sleep"
+      },
+      "awake_time": {
+        "name": "Awake time"
+      },
+      "sleep_score": {
+        "name": "Sleep score"
+      },
+      "sleep_quality": {
+        "name": "Sleep quality",
+        "state": {
+          "excellent": "Excellent",
+          "good": "Good",
+          "fair": "Fair",
+          "poor": "Poor"
+        }
+      },
+      "bedtime": {
+        "name": "Bedtime"
+      },
+      "wake_time": {
+        "name": "Wake-up time"
       }
     }
   }

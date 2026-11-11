@@ -7,7 +7,12 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .api import GarminPersonalClient
 from .const import DOMAIN
-from .coordinator import DailySummaryCoordinator, MyGarminData
+from .coordinator import (
+    DailySummaryCoordinator,
+    MyGarminData,
+    SleepCoordinator,
+    SyncWatcher,
+)
 
 __all__ = ["DOMAIN", "MyGarminConfigEntry", "async_setup_entry", "async_unload_entry"]
 
@@ -27,8 +32,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: MyGarminConfigEntry) -> 
     )
     daily = DailySummaryCoordinator(hass, entry, client)
     await daily.async_config_entry_first_refresh()
+    # Sleep must not hold the set-up back: its sensors stay unavailable until
+    # a later refresh succeeds.
+    sleep = SleepCoordinator(hass, entry, client)
+    await sleep.async_refresh()
 
-    entry.runtime_data = MyGarminData(client=client, daily=daily)
+    entry.runtime_data = MyGarminData(client=client, daily=daily, sleep=sleep)
+    entry.async_on_unload(daily.async_add_listener(SyncWatcher(hass, daily, [sleep])))
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
 

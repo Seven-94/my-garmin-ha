@@ -105,6 +105,39 @@
       },
       "last_sync": {
         "name": "Dernière synchronisation"
+      },
+      "sleep_duration": {
+        "name": "Durée de sommeil"
+      },
+      "deep_sleep": {
+        "name": "Sommeil profond"
+      },
+      "light_sleep": {
+        "name": "Sommeil léger"
+      },
+      "rem_sleep": {
+        "name": "Sommeil paradoxal"
+      },
+      "awake_time": {
+        "name": "Temps d'éveil"
+      },
+      "sleep_score": {
+        "name": "Score de sommeil"
+      },
+      "sleep_quality": {
+        "name": "Qualité du sommeil",
+        "state": {
+          "excellent": "Excellente",
+          "good": "Bonne",
+          "fair": "Moyenne",
+          "poor": "Mauvaise"
+        }
+      },
+      "bedtime": {
+        "name": "Coucher"
+      },
+      "wake_time": {
+        "name": "Lever"
       }
     }
   }

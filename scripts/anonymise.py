@@ -80,6 +80,7 @@ DEMOGRAPHICS: dict[str, Json] = {
     "height": 170.0,
     # The fitness age response gives the real age: as revealing as a birth date.
     "chronologicalAge": 40,
+    "ageGroup": "ADULT",
 }
 FAKE_NAME = "Anonymised"
 FAKE_EMAIL = "user@example.com"
