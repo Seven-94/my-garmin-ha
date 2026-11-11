@@ -481,3 +481,70 @@ def test_drawn_labels_are_never_reported_as_leaks(anonymiser: Anonymiser) -> Non
     }
 
     assert find_leaks(anonymiser, docs) == []
+
+
+def test_weight_summaries_stay_consistent_with_their_weigh_ins(
+    anonymiser: Anonymiser,
+) -> None:
+    def weigh_in(pk: int, hour: int, weight: float) -> dict[str, Json]:
+        timestamp = 1_794_200_000_000 + hour * 3_600_000
+        return {
+            "samplePk": pk,
+            "date": timestamp + 3_600_000,
+            "calendarDate": "2026-11-10",
+            "weight": weight,
+            "bmi": 22.4,
+            "bodyFat": 18.6,
+            "timestampGMT": timestamp,
+        }
+
+    metrics = [weigh_in(5001, 0, 70100.0), weigh_in(5002, 10, 70400.0)]
+    summary: dict[str, Json] = {
+        "summaryDate": "2026-11-10",
+        "numOfWeightEntries": 2,
+        "minWeight": 70100.0,
+        "maxWeight": 70400.0,
+        "latestWeight": dict(metrics[1]),
+        "allWeightMetrics": list(metrics),
+    }
+    doc: Json = {
+        "dailyWeightSummaries": [summary],
+        "totalAverage": {"weight": 70250.0},
+    }
+
+    result = anonymiser.anonymise(doc)
+
+    assert isinstance(result, dict)
+    summaries = result["dailyWeightSummaries"]
+    assert isinstance(summaries, list)
+    anonymised = summaries[0]
+    assert isinstance(anonymised, dict)
+    entries = anonymised["allWeightMetrics"]
+    assert isinstance(entries, list)
+    assert anonymised["numOfWeightEntries"] == len(entries) == 2
+    latest = max(entries, key=lambda m: number(m, "timestampGMT"))
+    assert anonymised["latestWeight"] == latest
+    weights = [number(m, "weight") for m in entries]
+    assert number(anonymised, "minWeight") == min(weights)
+    assert number(anonymised, "maxWeight") == max(weights)
+    assert weights != [70100.0, 70400.0]
+    assert find_leaks(anonymiser, {"weight.json": result}) == []
+
+
+def test_empty_weight_summary_keeps_its_null_latest_weight(
+    anonymiser: Anonymiser,
+) -> None:
+    summary: dict[str, Json] = {
+        "summaryDate": "2026-11-10",
+        "numOfWeightEntries": 0,
+        "minWeight": None,
+        "maxWeight": None,
+        "latestWeight": None,
+        "allWeightMetrics": [],
+    }
+
+    result = anonymiser.anonymise({"dailyWeightSummaries": [summary]})
+
+    assert result == {
+        "dailyWeightSummaries": [{**summary, "summaryDate": "2026-12-08"}]
+    }

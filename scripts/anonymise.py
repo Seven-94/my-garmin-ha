@@ -21,7 +21,8 @@ Health labels (stress and sleep categories, sleep feedback) are drawn at random
 from the same vocabulary, or become "ANONYMISED" when the vocabulary is unknown.
 Times that reveal habits (sleep, activities, latest readings, sync, weigh-in)
 also move by a random 1 to 4 hours, one offset per JSON object, so that start
-and end, GMT and local stay coherent.
+and end, GMT and local stay coherent. Daily weight summaries are then derived
+again from their synthetic weigh-ins: count, minimum, maximum and latest one.
 """
 
 import argparse
@@ -146,7 +147,7 @@ class Anonymiser:
             raise ValueError(msg)
 
     def anonymise(self, doc: Json) -> Json:
-        return self._walk(None, doc)
+        return _reconcile_weights(self._walk(None, doc))
 
     def _walk(self, key: str | None, value: Json, minutes: int = 0) -> Json:
         """Anonymise value; minutes moves it when it is an event time."""
@@ -313,6 +314,45 @@ class Anonymiser:
             and original in value
             for original in self._originals
         )
+
+
+def _reconcile_weights(doc: Json) -> Json:
+    """Recompute the fields of a daily weight summary derived from its weigh-ins.
+
+    Counts, extremes and the latest weigh-in are drawn or moved independently
+    by the key rules; deriving them again from the synthetic weigh-ins keeps
+    the summary as coherent as a real one, without any original value.
+    """
+    if isinstance(doc, list):
+        return [_reconcile_weights(v) for v in doc]
+    if not isinstance(doc, dict):
+        return doc
+    doc = {k: _reconcile_weights(v) for k, v in doc.items()}
+    metrics = doc.get("allWeightMetrics")
+    if not isinstance(metrics, list):
+        return doc
+    entries = [m for m in metrics if isinstance(m, dict)]
+    if "numOfWeightEntries" in doc:
+        doc["numOfWeightEntries"] = len(metrics)
+    timed = [m for m in entries if isinstance(m.get("timestampGMT"), int | float)]
+    if timed and "latestWeight" in doc:
+        doc["latestWeight"] = dict(max(timed, key=_timestamp_gmt))
+    weights = [
+        w
+        for m in entries
+        if isinstance(w := m.get("weight"), int | float) and not isinstance(w, bool)
+    ]
+    if weights:
+        if "minWeight" in doc:
+            doc["minWeight"] = min(weights)
+        if "maxWeight" in doc:
+            doc["maxWeight"] = max(weights)
+    return doc
+
+
+def _timestamp_gmt(metric: dict[str, Json]) -> float:
+    value = metric["timestampGMT"]
+    return float(value) if isinstance(value, int | float) else 0.0
 
 
 def _decimals(value: float) -> int:
