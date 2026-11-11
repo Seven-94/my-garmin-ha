@@ -5,16 +5,16 @@ from homeassistant.helpers.entity import EntityDescription
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
-from .coordinator import DailySummaryCoordinator
+from .coordinator import MyGarminCoordinator
 
 
-class MyGarminEntity(CoordinatorEntity[DailySummaryCoordinator]):
+class MyGarminEntity(CoordinatorEntity[MyGarminCoordinator]):
     """Names come from translations; IDs from the Garmin profile ID."""
 
     _attr_has_entity_name = True
 
     def __init__(
-        self, coordinator: DailySummaryCoordinator, description: EntityDescription
+        self, coordinator: MyGarminCoordinator, description: EntityDescription
     ) -> None:
         super().__init__(coordinator)
         entry = coordinator.config_entry

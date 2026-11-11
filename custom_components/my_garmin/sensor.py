@@ -1,8 +1,10 @@
-"""Sensors read from the daily summary."""
+"""Sensors: the daily summary, and last night."""
 
+import logging
 from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime
+from typing import Any
 
 from homeassistant.components.sensor import (
     SensorDeviceClass,
@@ -22,7 +24,7 @@ from homeassistant.util import dt as dt_util
 
 from . import MyGarminConfigEntry
 from .api import JsonObject
-from .coordinator import DailySummaryCoordinator
+from .coordinator import MyGarminCoordinator
 from .entity import MyGarminEntity
 
 # Not every Garmin unit has a Home Assistant constant.
@@ -33,7 +35,13 @@ UNIT_BPM = "bpm"
 UNIT_BREATHS = "br/min"
 
 type Number = float | int | None
-type StateValue = Number | datetime
+type StateValue = Number | datetime | str
+
+_LOGGER = logging.getLogger(__name__)
+
+SLEEP_QUALITIES = ["excellent", "good", "fair", "poor"]
+# Unknown values are logged once per run, not at every refresh.
+_REPORTED_QUALITIES: set[str] = set()
 
 
 def _measure(
@@ -76,9 +84,49 @@ def _last_sync(data: JsonObject) -> StateValue:
     return parsed.replace(tzinfo=dt_util.UTC) if parsed.tzinfo is None else parsed
 
 
+def _epoch_ms(key: str) -> Callable[[JsonObject], StateValue]:
+    """Read a *GMT timestamp sent in milliseconds since the epoch."""
+
+    def read(data: JsonObject) -> StateValue:
+        value = _measure(key, zero_is_missing=True)(data)
+        if value is None:
+            return None
+        return datetime.fromtimestamp(value / 1000, tz=UTC)
+
+    return read
+
+
+def _overall_score(data: JsonObject) -> dict[str, Any]:
+    scores = data.get("sleepScores")
+    overall = scores.get("overall") if isinstance(scores, dict) else None
+    return overall if isinstance(overall, dict) else {}
+
+
+def _sleep_score(data: JsonObject) -> StateValue:
+    return _measure("value", zero_is_missing=True)(_overall_score(data))
+
+
+def _sleep_quality(data: JsonObject) -> StateValue:
+    value = _overall_score(data).get("qualifierKey")
+    if not isinstance(value, str):
+        return None
+    quality = value.lower()
+    if quality in SLEEP_QUALITIES:
+        return quality
+    if quality not in _REPORTED_QUALITIES:
+        _REPORTED_QUALITIES.add(quality)
+        _LOGGER.warning("Unknown sleep quality from Garmin: %s", value)
+    return None
+
+
+def _night_of(data: JsonObject) -> dict[str, Any]:
+    return {"night_of": data.get("calendarDate")}
+
+
 @dataclass(frozen=True, kw_only=True)
 class MyGarminSensorDescription(SensorEntityDescription):
     value_fn: Callable[[JsonObject], StateValue]
+    attributes_fn: Callable[[JsonObject], dict[str, Any]] | None = None
 
 
 def _counter(
@@ -209,29 +257,95 @@ SENSORS: tuple[MyGarminSensorDescription, ...] = (
 )
 
 
+def _sleep_duration(
+    key: str, field: str, suggested_unit: UnitOfTime, precision: int
+) -> MyGarminSensorDescription:
+    return MyGarminSensorDescription(
+        key=key,
+        translation_key=key,
+        native_unit_of_measurement=UnitOfTime.SECONDS,
+        suggested_unit_of_measurement=suggested_unit,
+        suggested_display_precision=precision,
+        device_class=SensorDeviceClass.DURATION,
+        state_class=SensorStateClass.MEASUREMENT,
+        # A stage can genuinely last 0 s; a missing night is caught upstream.
+        value_fn=_measure(field),
+        attributes_fn=_night_of,
+    )
+
+
+SLEEP_SENSORS: tuple[MyGarminSensorDescription, ...] = (
+    _sleep_duration("sleep_duration", "sleepTimeSeconds", UnitOfTime.HOURS, 1),
+    _sleep_duration("deep_sleep", "deepSleepSeconds", UnitOfTime.MINUTES, 0),
+    _sleep_duration("light_sleep", "lightSleepSeconds", UnitOfTime.MINUTES, 0),
+    _sleep_duration("rem_sleep", "remSleepSeconds", UnitOfTime.MINUTES, 0),
+    _sleep_duration("awake_time", "awakeSleepSeconds", UnitOfTime.MINUTES, 0),
+    MyGarminSensorDescription(
+        key="sleep_score",
+        translation_key="sleep_score",
+        state_class=SensorStateClass.MEASUREMENT,
+        value_fn=_sleep_score,
+        attributes_fn=_night_of,
+    ),
+    MyGarminSensorDescription(
+        key="sleep_quality",
+        translation_key="sleep_quality",
+        device_class=SensorDeviceClass.ENUM,
+        options=SLEEP_QUALITIES,
+        value_fn=_sleep_quality,
+        attributes_fn=_night_of,
+    ),
+    MyGarminSensorDescription(
+        key="bedtime",
+        translation_key="bedtime",
+        device_class=SensorDeviceClass.TIMESTAMP,
+        value_fn=_epoch_ms("sleepStartTimestampGMT"),
+        attributes_fn=_night_of,
+    ),
+    MyGarminSensorDescription(
+        key="wake_time",
+        translation_key="wake_time",
+        device_class=SensorDeviceClass.TIMESTAMP,
+        value_fn=_epoch_ms("sleepEndTimestampGMT"),
+        attributes_fn=_night_of,
+    ),
+)
+
+
 async def async_setup_entry(
     hass: HomeAssistant,
     entry: MyGarminConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     del hass
-    coordinator = entry.runtime_data.daily
+    data = entry.runtime_data
     async_add_entities(
-        MyGarminSensor(coordinator, description) for description in SENSORS
+        [
+            *(MyGarminSensor(data.daily, description) for description in SENSORS),
+            *(MyGarminSensor(data.sleep, description) for description in SLEEP_SENSORS),
+        ]
     )
 
 
 class MyGarminSensor(MyGarminEntity, SensorEntity):
     def __init__(
         self,
-        coordinator: DailySummaryCoordinator,
+        coordinator: MyGarminCoordinator,
         description: MyGarminSensorDescription,
     ) -> None:
         super().__init__(coordinator, description)
         self._value_fn = description.value_fn
-        self._attr_native_value = self._value_fn(coordinator.data)
+        self._attributes_fn = description.attributes_fn
+        self._read()
+
+    def _read(self) -> None:
+        # No data yet when the first refresh of this coordinator failed.
+        data = self.coordinator.data or {}
+        self._attr_native_value = self._value_fn(data)
+        if self._attributes_fn is not None:
+            self._attr_extra_state_attributes = self._attributes_fn(data)
 
     @callback
     def _handle_coordinator_update(self) -> None:
-        self._attr_native_value = self._value_fn(self.coordinator.data)
+        self._read()
         super()._handle_coordinator_update()

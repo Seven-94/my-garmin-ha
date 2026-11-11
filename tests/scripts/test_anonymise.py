@@ -95,6 +95,7 @@ def test_demographic_fields_are_replaced(anonymiser: Anonymiser) -> None:
         {
             "userData": {"birthDate": "1981-03-04", "gender": "MALE", "height": 181.0},
             "chronologicalAge": 45,
+            "ageGroup": "SENIOR",
         }
     )
 
@@ -103,6 +104,7 @@ def test_demographic_fields_are_replaced(anonymiser: Anonymiser) -> None:
     assert "181.0" not in text
     assert isinstance(result, dict)
     assert result["chronologicalAge"] != 45
+    assert result["ageGroup"] == "ADULT"
 
 
 def test_dates_and_timestamps_are_shifted(anonymiser: Anonymiser) -> None:

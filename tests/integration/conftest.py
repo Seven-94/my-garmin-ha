@@ -31,6 +31,8 @@ def mock_client() -> Iterator[MagicMock]:
     client = MagicMock()
     client.get_daily_summary = AsyncMock(return_value={"userProfileId": PROFILE_ID})
     client.get_user_profile = AsyncMock(return_value={"displayName": "Anonymised"})
+    # No night recorded unless a test says otherwise.
+    client.get_daily_sleep = AsyncMock(return_value={})
     with (
         patch(
             "custom_components.my_garmin.config_flow.GarminPersonalClient",
