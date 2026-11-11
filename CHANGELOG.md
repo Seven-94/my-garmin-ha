@@ -57,6 +57,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   a threshold; the last sync seen is kept across midnight and restarts.
 - Options: sync overdue threshold (24 h by default) and daily summary refresh
   interval (10 min by default); saving them reloads the integration.
+- Diagnostics for bug reports: the entry and each coordinator's state, with
+  identifiers, names, URLs, GPS positions and free text redacted; health
+  measurements and times are replaced by their shape (type and digits);
+  menstrual and nutrition data are left out.
 - SpO2 and acclimation sensors: seven-day average and average during sleep,
   refreshed after each watch sync and every two hours. Average, lowest and
   latest SpO2 (same values as the daily summary), average during tomorrow's
