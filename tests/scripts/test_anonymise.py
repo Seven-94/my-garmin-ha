@@ -189,7 +189,7 @@ def test_catalogue_numbers_and_settings_are_kept(anonymiser: Anonymiser) -> None
         "bodyBatteryValueDescriptorIndex": 1,
         "bodyBatteryVersion": 2.0,
         "fileFormat": {"formatId": 7, "formatKey": "fit"},
-        "sleepScores": {"overall": {"qualifierKey": "GOOD"}},
+        "sleepWindowConfirmationType": "enhanced_confirmed_final",
         "timeZone": "Europe/Paris",
         "isValid": True,
         "nothing": None,
@@ -414,3 +414,45 @@ def test_day_boundaries_only_move_by_whole_weeks(anonymiser: Anonymiser) -> None
     assert result["calendarDate"] == "2026-12-08"
     assert result["startTimestampLocal"] == "2026-12-08T00:00:00.0"
     assert result["wellnessEndTimeLocal"] == "2026-12-08T23:59:59.0"
+
+
+def test_health_labels_come_from_the_same_vocabulary(anonymiser: Anonymiser) -> None:
+    # A stress or sleep category is derived from real measurements.
+    result = anonymiser.anonymise(
+        [{"stressQualifier": "BALANCED", "qualifier": "calm"} for _ in range(20)]
+    )
+
+    assert isinstance(result, list)
+    stress = {item["stressQualifier"] for item in result if isinstance(item, dict)}
+    lower = {item["qualifier"] for item in result if isinstance(item, dict)}
+    assert stress <= {"CALM", "BALANCED", "STRESSFUL", "VERY_STRESSFUL"}
+    assert lower <= {"calm", "balanced", "stressful", "very_stressful"}
+    # Drawn at random, not copied: several values over 20 draws.
+    assert len(stress) > 1
+    assert len(lower) > 1
+
+
+def test_sleep_labels_and_unknown_feedback_are_replaced(
+    anonymiser: Anonymiser,
+) -> None:
+    result = anonymiser.anonymise(
+        {
+            "overall": {"qualifierKey": "GOOD"},
+            "sleepScoreFeedback": "POSITIVE_SHORT_BUT_DEEP",
+        }
+    )
+
+    assert isinstance(result, dict)
+    overall = result["overall"]
+    assert isinstance(overall, dict)
+    assert overall["qualifierKey"] in {"EXCELLENT", "GOOD", "FAIR", "POOR"}
+    assert result["sleepScoreFeedback"] == "ANONYMISED"
+
+
+def test_drawn_labels_are_never_reported_as_leaks(anonymiser: Anonymiser) -> None:
+    docs = {
+        f"{i}.json": anonymiser.anonymise({"stressQualifier": "BALANCED"})
+        for i in range(10)
+    }
+
+    assert find_leaks(anonymiser, docs) == []

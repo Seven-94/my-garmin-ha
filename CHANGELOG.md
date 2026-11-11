@@ -16,3 +16,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Scripts to capture raw API responses and turn them into anonymised fixtures.
 - Config flow: API key and its expiry date, re-authentication and
   reconfiguration, one Garmin account per Home Assistant instance.
+- Daily summary sensors, refreshed every 10 minutes: steps, step goal,
+  distance, calories, intensity minutes, floors, heart rate, stress, Body
+  Battery, respiration, SpO2 and last sync.

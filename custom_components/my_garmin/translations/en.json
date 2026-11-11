@@ -52,5 +52,60 @@
       "reconfigure_successful": "The key is updated.",
       "wrong_account": "This key belongs to another Garmin account than the one configured."
     }
+  },
+  "entity": {
+    "sensor": {
+      "steps": {
+        "name": "Steps"
+      },
+      "step_goal": {
+        "name": "Step goal"
+      },
+      "distance": {
+        "name": "Distance"
+      },
+      "active_calories": {
+        "name": "Active calories"
+      },
+      "total_calories": {
+        "name": "Total calories"
+      },
+      "intensity_minutes": {
+        "name": "Intensity minutes"
+      },
+      "floors_ascended": {
+        "name": "Floors climbed"
+      },
+      "resting_heart_rate": {
+        "name": "Resting heart rate"
+      },
+      "min_heart_rate": {
+        "name": "Minimum heart rate"
+      },
+      "max_heart_rate": {
+        "name": "Maximum heart rate"
+      },
+      "average_stress": {
+        "name": "Average stress"
+      },
+      "body_battery": {
+        "name": "Body Battery"
+      },
+      "body_battery_highest": {
+        "name": "Body Battery highest"
+      },
+      "body_battery_lowest": {
+        "name": "Body Battery lowest"
+      },
+      "respiration": {
+        "name": "Respiration rate"
+      },
+      "spo2": {
+        "name": "Average SpO2"
+      },
+      "last_sync": {
+        "name": "Last sync"
+      }
+    }
   }
 }
