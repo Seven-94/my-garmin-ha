@@ -74,6 +74,16 @@ class GarminPersonalClient:
             f"/hrv-service/hrv/{day.isoformat()}", null_is_empty=True
         )
 
+    async def get_spo2(self, day: date) -> JsonObject:
+        """Blood oxygen saturation of the day, and its acclimation baseline.
+
+        Empty when the device records no SpO2: Garmin then answers a null body.
+        """
+        return await self._get_object(
+            f"/wellness-service/wellness/daily/spo2acclimation/{day.isoformat()}",
+            null_is_empty=True,
+        )
+
     async def get_weight_range(self, start: date, end: date) -> JsonObject:
         """Weigh-ins between two days, and the last one before them."""
         # weight/all answers HTTP 400: weight/range is the working endpoint.

@@ -504,6 +504,27 @@
       },
       "key_expiry": {
         "name": "Expiration de la clé API"
+      },
+      "acclimation_spo2_average": {
+        "name": "SpO2 moyenne (acclimatation)"
+      },
+      "acclimation_spo2_lowest": {
+        "name": "SpO2 la plus basse (acclimatation)"
+      },
+      "acclimation_spo2_latest": {
+        "name": "Dernière SpO2 (acclimatation)"
+      },
+      "acclimation_spo2_seven_day_average": {
+        "name": "SpO2 moyenne sur 7 jours"
+      },
+      "acclimation_spo2_sleep_average": {
+        "name": "SpO2 moyenne pendant le sommeil"
+      },
+      "acclimation_spo2_tomorrow_sleep_average": {
+        "name": "SpO2 moyenne pendant le sommeil de demain"
+      },
+      "acclimation_altitude": {
+        "name": "Altitude moyenne (acclimatation)"
       }
     },
     "event": {

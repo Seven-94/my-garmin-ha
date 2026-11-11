@@ -53,6 +53,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - API key expiry: a diagnostic date sensor, and a repair issue a week before
   the date the user entered (warning), turning into an error once it has
   passed. Reconfiguring with a new key and date removes it.
+- SpO2 and acclimation sensors: average, lowest and latest SpO2, seven-day
+  average and average during sleep, refreshed after each watch sync and every
+  two hours. Average during tomorrow's sleep and average altitude are disabled
+  by default. Devices without SpO2 get unknown values, without errors.
 
 ### Changed
 
