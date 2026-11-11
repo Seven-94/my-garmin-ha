@@ -1,12 +1,16 @@
 {
   "domain": "my_garmin",
   "name": "My Garmin",
-  "codeowners": ["@Seven-94"],
+  "codeowners": [
+    "@Seven-94"
+  ],
+  "config_flow": true,
   "dependencies": [],
   "documentation": "https://github.com/Seven-94/my-garmin-ha",
   "integration_type": "service",
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/Seven-94/my-garmin-ha/issues",
   "requirements": [],
+  "single_config_entry": true,
   "version": "0.1.0"
 }

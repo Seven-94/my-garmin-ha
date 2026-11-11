@@ -1,4 +1,4 @@
-"""Fixtures wiring the API client to the fake Garmin server."""
+"""Shared fixtures: the fake Garmin server, and Home Assistant set-up."""
 
 from collections.abc import AsyncIterator
 
@@ -15,8 +15,19 @@ def clock() -> FakeClock:
     return FakeClock()
 
 
+@pytest.fixture(autouse=True)
+def auto_enable_custom_integrations(enable_custom_integrations: None) -> None:
+    """Let Home Assistant load custom_components/my_garmin in every test."""
+
+
+# The Home Assistant test plugin blocks every socket. socket_enabled lifts that
+# block for the fake server, while the plugin's 127.0.0.1-only filter still
+# stops any connection to the Internet.
 @pytest.fixture
-async def fake_garmin(clock: FakeClock) -> AsyncIterator[FakeGarmin]:
+async def fake_garmin(
+    clock: FakeClock, socket_enabled: None
+) -> AsyncIterator[FakeGarmin]:
+    del socket_enabled  # requested for its side effect only
     fake = FakeGarmin(clock)
     server = TestServer(fake.app)
     await server.start_server()
@@ -26,7 +37,8 @@ async def fake_garmin(clock: FakeClock) -> AsyncIterator[FakeGarmin]:
 
 
 @pytest.fixture
-async def session() -> AsyncIterator[aiohttp.ClientSession]:
+async def session(socket_enabled: None) -> AsyncIterator[aiohttp.ClientSession]:
+    del socket_enabled  # requested for its side effect only
     async with aiohttp.ClientSession() as client_session:
         yield client_session
 

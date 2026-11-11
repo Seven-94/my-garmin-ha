@@ -1,0 +1,56 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connecter votre compte Garmin",
+        "description": "Créez une clé d'API personnelle dans Garmin Connect (Paramètres > Clé d'API personnelle) et collez-la ici. Garmin n'affiche la clé qu'une seule fois.",
+        "data": {
+          "api_key": "Clé d'API",
+          "key_expires": "Date d'expiration de la clé"
+        },
+        "data_description": {
+          "api_key": "Votre clé d'API personnelle Garmin Connect. Elle n'est enregistrée que dans Home Assistant.",
+          "key_expires": "La date d'expiration affichée par Garmin pour cette clé. Home Assistant vous préviendra avant qu'elle expire."
+        }
+      },
+      "reauth_confirm": {
+        "title": "Clé Garmin refusée",
+        "description": "Garmin n'accepte plus la clé d'API : elle a expiré ou a été supprimée. Créez une nouvelle clé dans Garmin Connect et saisissez-la ici.",
+        "data": {
+          "api_key": "Clé d'API",
+          "key_expires": "Date d'expiration de la clé"
+        },
+        "data_description": {
+          "api_key": "La nouvelle clé d'API personnelle Garmin Connect.",
+          "key_expires": "La date d'expiration affichée par Garmin pour la nouvelle clé."
+        }
+      },
+      "reconfigure": {
+        "title": "Mettre à jour la clé Garmin",
+        "description": "Saisissez de nouveau la clé d'API, par exemple après en avoir créé une nouvelle, ainsi que sa date d'expiration.",
+        "data": {
+          "api_key": "Clé d'API",
+          "key_expires": "Date d'expiration de la clé"
+        },
+        "data_description": {
+          "api_key": "Votre clé d'API personnelle Garmin Connect.",
+          "key_expires": "La date d'expiration affichée par Garmin pour cette clé."
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Garmin a refusé la clé d'API. Vérifiez qu'elle a été collée en entier et qu'elle n'a pas été supprimée.",
+      "cannot_connect": "Impossible de joindre Garmin pour le moment. Réessayez dans quelques minutes.",
+      "expiry_in_past": "Cette date est passée : la clé a déjà expiré.",
+      "no_profile_id": "Garmin a accepté la clé mais n'a pas renvoyé l'identifiant du compte. Réessayez plus tard.",
+      "unknown": "Erreur inattendue. Consultez les journaux de Home Assistant."
+    },
+    "abort": {
+      "single_instance_allowed": "Un compte Garmin est déjà configuré.",
+      "already_configured": "Ce compte Garmin est déjà configuré.",
+      "reauth_successful": "La nouvelle clé est enregistrée.",
+      "reconfigure_successful": "La clé est mise à jour.",
+      "wrong_account": "Cette clé appartient à un autre compte Garmin que celui configuré."
+    }
+  }
+}
