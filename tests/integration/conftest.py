@@ -1,6 +1,9 @@
 """Fixtures for the Home Assistant side: a mocked Garmin client and a config entry."""
 
+import json
 from collections.abc import Iterator
+from pathlib import Path
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -14,6 +17,12 @@ API_KEY = "fake-api-key-for-tests"  # pragma: allowlist secret
 OTHER_API_KEY = "another-fake-key"  # pragma: allowlist secret
 PROFILE_ID = 10_000_001
 KEY_EXPIRES = "2099-01-31"
+FIXTURES = Path(__file__).parent.parent / "fixtures"
+
+
+def load_fixture(name: str) -> Any:
+    """An anonymised Garmin response, with synthetic measurements."""
+    return json.loads((FIXTURES / name).read_text(encoding="utf-8"))
 
 
 @pytest.fixture

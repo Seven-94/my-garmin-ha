@@ -24,7 +24,7 @@ async def test_setup_and_unload(
     await hass.async_block_till_done()
 
     assert config_entry.state is ConfigEntryState.LOADED
-    assert config_entry.runtime_data is mock_client
+    assert config_entry.runtime_data.client is mock_client
     assert mock_client.factory.call_args.args[1] == API_KEY
 
     assert await hass.config_entries.async_unload(config_entry.entry_id)
@@ -34,7 +34,7 @@ async def test_setup_and_unload(
 async def test_rejected_key_starts_reauth(
     hass: HomeAssistant, mock_client: MagicMock, config_entry: MockConfigEntry
 ) -> None:
-    mock_client.get_user_profile.side_effect = GarminAuthError("rejected")
+    mock_client.get_daily_summary.side_effect = GarminAuthError("rejected")
     config_entry.add_to_hass(hass)
 
     await hass.config_entries.async_setup(config_entry.entry_id)
@@ -54,7 +54,7 @@ async def test_temporary_errors_retry_later(
     config_entry: MockConfigEntry,
     error: Exception,
 ) -> None:
-    mock_client.get_user_profile.side_effect = error
+    mock_client.get_daily_summary.side_effect = error
     config_entry.add_to_hass(hass)
 
     await hass.config_entries.async_setup(config_entry.entry_id)

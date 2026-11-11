@@ -17,6 +17,8 @@ synthetic value with the same type, sign, number of digits and decimals: no
 real health data reaches the repository, yet parsers see the same formats.
 Null, zero and negative values are kept, as Garmin uses them for "not
 measured"; so are catalogue numbers (type IDs, indexes, versions, formats).
+Health labels (stress and sleep categories, sleep feedback) are drawn at random
+from the same vocabulary, or become "ANONYMISED" when the vocabulary is unknown.
 Times that reveal habits (sleep, activities, latest readings, sync, weigh-in)
 also move by a random 1 to 4 hours, one offset per JSON object, so that start
 and end, GMT and local stay coherent.
@@ -60,6 +62,13 @@ _EVENT_KEY = re.compile(
     r"|^(?:uploadedDate|lastUpdateDate|lastUpdated|lastSyncTimestampGMT"
     r"|timestampGMT|date)$)"
 )
+# Categories Garmin derives from measurements: as personal as the numbers.
+_LABEL_KEY = re.compile(r"(?:[Qq]ualifier|[Ff]eedback|[Ii]nsight)")
+_LABEL_VOCABULARIES = (
+    ("calm", "balanced", "stressful", "very_stressful"),
+    ("excellent", "good", "fair", "poor"),
+)
+FAKE_LABEL = "anonymised"
 _DATETIME = re.compile(r"^(\d{4}-\d{2}-\d{2})([T ])(\d{2}:\d{2}:\d{2})(.*)$")
 _DATE_PREFIX = re.compile(r"^(\d{4}-\d{2}-\d{2})(?=$|[T ])")
 _DATE_ANYWHERE = re.compile(r"\d{4}-\d{2}-\d{2}")
@@ -141,6 +150,10 @@ class Anonymiser:
             return [self._walk(key, v, minutes) for v in value]
         if value is None or isinstance(value, bool):
             return value
+        if isinstance(value, str) and key is not None and _LABEL_KEY.search(key):
+            # Not remembered for the leak check: a category is not an identity,
+            # and a random draw may well give the original value back.
+            return self._label(value)
         if key is not None:
             replaced = self._by_key(key, value)
             if replaced is not _Rule.NONE:
@@ -188,6 +201,14 @@ class Anonymiser:
             self._originals.add(value)
         if isinstance(value, str):
             self._original_dates.update(_DATE_ANYWHERE.findall(value))
+
+    def _label(self, value: str) -> str:
+        """A random label from the same vocabulary, in the same case."""
+        drawn = FAKE_LABEL
+        for vocabulary in _LABEL_VOCABULARIES:
+            if value.lower() in vocabulary:
+                drawn = vocabulary[int(self._draw() * len(vocabulary))]
+        return drawn.upper() if value.isupper() else drawn
 
     def _event_offset(self) -> int:
         low, high = _EVENT_OFFSET_MINUTES

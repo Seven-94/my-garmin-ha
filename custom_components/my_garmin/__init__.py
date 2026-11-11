@@ -1,41 +1,37 @@
 """My Garmin: Home Assistant integration for the Garmin Connect Personal API."""
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_API_KEY
+from homeassistant.const import CONF_API_KEY, Platform
 from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
-from .api import (
-    GarminAuthError,
-    GarminConnectionError,
-    GarminPersonalClient,
-    GarminRateLimitError,
-)
+from .api import GarminPersonalClient
 from .const import DOMAIN
+from .coordinator import DailySummaryCoordinator, MyGarminData
 
 __all__ = ["DOMAIN", "MyGarminConfigEntry", "async_setup_entry", "async_unload_entry"]
 
-type MyGarminConfigEntry = ConfigEntry[GarminPersonalClient]
+PLATFORMS = [Platform.SENSOR]
+
+type MyGarminConfigEntry = ConfigEntry[MyGarminData]
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: MyGarminConfigEntry) -> bool:
-    """Check the key once, then keep the client for the platforms."""
+    """Fetch the daily summary once, then set up the sensors.
+
+    The first refresh also checks the key: a rejected key starts
+    re-authentication, a network error or a 429 retries the set-up later.
+    """
     client = GarminPersonalClient(
         async_get_clientsession(hass), entry.data[CONF_API_KEY]
     )
-    try:
-        await client.get_user_profile()
-    except GarminAuthError as err:
-        raise ConfigEntryAuthFailed(str(err)) from err
-    except (GarminConnectionError, GarminRateLimitError) as err:
-        raise ConfigEntryNotReady(str(err)) from err
+    daily = DailySummaryCoordinator(hass, entry, client)
+    await daily.async_config_entry_first_refresh()
 
-    entry.runtime_data = client
+    entry.runtime_data = MyGarminData(client=client, daily=daily)
+    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: MyGarminConfigEntry) -> bool:
-    """Nothing to tear down yet: no platform is set up."""
-    del hass, entry
-    return True
+    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)

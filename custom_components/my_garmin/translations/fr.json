@@ -52,5 +52,60 @@
       "reconfigure_successful": "La clé est mise à jour.",
       "wrong_account": "Cette clé appartient à un autre compte Garmin que celui configuré."
     }
+  },
+  "entity": {
+    "sensor": {
+      "steps": {
+        "name": "Pas"
+      },
+      "step_goal": {
+        "name": "Objectif de pas"
+      },
+      "distance": {
+        "name": "Distance"
+      },
+      "active_calories": {
+        "name": "Calories actives"
+      },
+      "total_calories": {
+        "name": "Calories totales"
+      },
+      "intensity_minutes": {
+        "name": "Minutes d'intensité"
+      },
+      "floors_ascended": {
+        "name": "Étages montés"
+      },
+      "resting_heart_rate": {
+        "name": "Fréquence cardiaque au repos"
+      },
+      "min_heart_rate": {
+        "name": "Fréquence cardiaque minimale"
+      },
+      "max_heart_rate": {
+        "name": "Fréquence cardiaque maximale"
+      },
+      "average_stress": {
+        "name": "Stress moyen"
+      },
+      "body_battery": {
+        "name": "Body Battery"
+      },
+      "body_battery_highest": {
+        "name": "Body Battery maximale"
+      },
+      "body_battery_lowest": {
+        "name": "Body Battery minimale"
+      },
+      "respiration": {
+        "name": "Fréquence respiratoire"
+      },
+      "spo2": {
+        "name": "SpO2 moyenne"
+      },
+      "last_sync": {
+        "name": "Dernière synchronisation"
+      }
+    }
   }
 }
