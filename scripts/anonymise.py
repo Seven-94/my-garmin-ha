@@ -65,7 +65,18 @@ _EVENT_KEY = re.compile(
 # Categories Garmin derives from measurements: as personal as the numbers.
 _LABEL_KEY = re.compile(r"(?:[Qq]ualifier|[Ff]eedback|[Ii]nsight)")
 _LABEL_VOCABULARIES = (
-    ("calm", "balanced", "stressful", "very_stressful"),
+    # One vocabulary for both stress forms: the "_awake" suffix is derived from
+    # the night's data too, so it is drawn rather than kept.
+    (
+        "calm",
+        "balanced",
+        "stressful",
+        "very_stressful",
+        "calm_awake",
+        "balanced_awake",
+        "stressful_awake",
+        "very_stressful_awake",
+    ),
     ("excellent", "good", "fair", "poor"),
 )
 FAKE_LABEL = "anonymised"

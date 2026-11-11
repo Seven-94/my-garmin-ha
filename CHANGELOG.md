@@ -22,3 +22,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Sleep sensors (duration, stages, score, quality, bedtime, wake-up time),
   refreshed after each watch sync; last night stays shown until the next one
   is recorded.
+- Every other daily summary field: activity time, floors descended and goals,
+  calorie details (remaining calories can be negative), wheelchair pushes,
+  7-day and 2-minute heart rates, abnormal heart rate alerts, maximum stress,
+  stress category, durations and shares, Body Battery charged and drained,
+  respiration and SpO2 details, hydration and wellness distance. Niche ones are
+  disabled by default.
+- Jet lag binary sensor, with the trip name as an attribute.
+
+### Changed
+
+- The fixture anonymiser also draws the `_AWAKE` stress categories.

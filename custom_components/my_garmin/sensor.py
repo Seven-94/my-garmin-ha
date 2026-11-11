@@ -4,7 +4,7 @@ import logging
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, TypedDict, Unpack
 
 from homeassistant.components.sensor import (
     SensorDeviceClass,
@@ -17,6 +17,7 @@ from homeassistant.const import (
     EntityCategory,
     UnitOfLength,
     UnitOfTime,
+    UnitOfVolume,
 )
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
@@ -33,6 +34,7 @@ UNIT_FLOORS = "floors"
 UNIT_KCAL = "kcal"
 UNIT_BPM = "bpm"
 UNIT_BREATHS = "br/min"
+UNIT_PUSHES = "pushes"
 
 type Number = float | int | None
 type StateValue = Number | datetime | str
@@ -40,24 +42,35 @@ type StateValue = Number | datetime | str
 _LOGGER = logging.getLogger(__name__)
 
 SLEEP_QUALITIES = ["excellent", "good", "fair", "poor"]
+STRESS_CATEGORIES = [
+    "calm",
+    "balanced",
+    "stressful",
+    "very_stressful",
+    "calm_awake",
+    "balanced_awake",
+    "stressful_awake",
+    "very_stressful_awake",
+]
 # Unknown values are logged once per run, not at every refresh.
-_REPORTED_QUALITIES: set[str] = set()
+_REPORTED_VALUES: set[tuple[str, str]] = set()
 
 
 def _measure(
-    key: str, *, zero_is_missing: bool = False
+    key: str, *, zero_is_missing: bool = False, signed: bool = False
 ) -> Callable[[JsonObject], Number]:
     """Read a number; Garmin sends null or a negative value when not measured.
 
     Some readings also use 0 for "no reading" (a heart rate is never 0), while
-    a count such as steps can genuinely be 0.
+    a count such as steps can genuinely be 0. A few values, such as the
+    calories left for the day, are genuinely negative.
     """
 
     def read(data: JsonObject) -> Number:
         value = data.get(key)
         if isinstance(value, bool) or not isinstance(value, int | float):
             return None
-        if value < 0 or (zero_is_missing and value == 0):
+        if (value < 0 and not signed) or (zero_is_missing and value == 0):
             return None
         return value
 
@@ -106,17 +119,26 @@ def _sleep_score(data: JsonObject) -> StateValue:
     return _measure("value", zero_is_missing=True)(_overall_score(data))
 
 
-def _sleep_quality(data: JsonObject) -> StateValue:
-    value = _overall_score(data).get("qualifierKey")
+def _option(value: object, options: list[str], what: str) -> StateValue:
+    """Map a Garmin enum value to one of the sensor options."""
     if not isinstance(value, str):
         return None
-    quality = value.lower()
-    if quality in SLEEP_QUALITIES:
-        return quality
-    if quality not in _REPORTED_QUALITIES:
-        _REPORTED_QUALITIES.add(quality)
-        _LOGGER.warning("Unknown sleep quality from Garmin: %s", value)
+    option = value.lower()
+    if option in options:
+        return option
+    if (what, option) not in _REPORTED_VALUES:
+        _REPORTED_VALUES.add((what, option))
+        _LOGGER.warning("Unknown %s from Garmin: %s", what, value)
     return None
+
+
+def _sleep_quality(data: JsonObject) -> StateValue:
+    value = _overall_score(data).get("qualifierKey")
+    return _option(value, SLEEP_QUALITIES, "sleep quality")
+
+
+def _stress_category(data: JsonObject) -> StateValue:
+    return _option(data.get("stressQualifier"), STRESS_CATEGORIES, "stress category")
 
 
 def _night_of(data: JsonObject) -> dict[str, Any]:
@@ -129,67 +151,114 @@ class MyGarminSensorDescription(SensorEntityDescription):
     attributes_fn: Callable[[JsonObject], dict[str, Any]] | None = None
 
 
-def _counter(
+class _NumberOptions(TypedDict, total=False):
+    device_class: SensorDeviceClass
+    suggested_unit: str
+    precision: int
+    signed: bool
+    enabled: bool
+
+
+def _number(
     key: str,
     field: str,
-    unit: str,
+    unit: str | None = None,
     *,
-    device_class: SensorDeviceClass | None = None,
-    suggested_unit: str | None = None,
-    precision: int | None = None,
-    enabled: bool = True,
+    state_class: SensorStateClass | None = SensorStateClass.MEASUREMENT,
+    zero_is_missing: bool = False,
+    **options: Unpack[_NumberOptions],
 ) -> MyGarminSensorDescription:
-    """A total that grows during the day and restarts at midnight."""
+    """A number read straight from one Garmin field."""
     return MyGarminSensorDescription(
         key=key,
         translation_key=key,
         native_unit_of_measurement=unit,
-        device_class=device_class,
-        suggested_unit_of_measurement=suggested_unit,
-        suggested_display_precision=precision,
-        state_class=SensorStateClass.TOTAL_INCREASING,
-        entity_registry_enabled_default=enabled,
-        value_fn=_measure(field),
+        device_class=options.get("device_class"),
+        suggested_unit_of_measurement=options.get("suggested_unit"),
+        suggested_display_precision=options.get("precision"),
+        state_class=state_class,
+        entity_registry_enabled_default=options.get("enabled", True),
+        value_fn=_measure(
+            field,
+            zero_is_missing=zero_is_missing,
+            signed=options.get("signed", False),
+        ),
+    )
+
+
+def _counter(
+    key: str, field: str, unit: str | None = None, **options: Unpack[_NumberOptions]
+) -> MyGarminSensorDescription:
+    """A total that grows during the day and restarts at midnight."""
+    return _number(
+        key, field, unit, state_class=SensorStateClass.TOTAL_INCREASING, **options
     )
 
 
 def _reading(
-    key: str, field: str, unit: str, *, enabled: bool = True
+    key: str, field: str, unit: str | None = None, **options: Unpack[_NumberOptions]
 ) -> MyGarminSensorDescription:
     """A physiological reading, where 0 means "not measured"."""
-    return MyGarminSensorDescription(
-        key=key,
-        translation_key=key,
-        native_unit_of_measurement=unit,
-        state_class=SensorStateClass.MEASUREMENT,
-        entity_registry_enabled_default=enabled,
-        value_fn=_measure(field, zero_is_missing=True),
+    return _number(key, field, unit, zero_is_missing=True, **options)
+
+
+def _goal(
+    key: str, field: str, unit: str, **options: Unpack[_NumberOptions]
+) -> MyGarminSensorDescription:
+    """A target set by the user: not a measurement, so no statistics."""
+    return _number(key, field, unit, state_class=None, **options)
+
+
+def _time_spent(
+    key: str,
+    field: str,
+    suggested_unit: UnitOfTime = UnitOfTime.MINUTES,
+    *,
+    enabled: bool = True,
+) -> MyGarminSensorDescription:
+    """Seconds spent in a state today."""
+    return _counter(
+        key,
+        field,
+        UnitOfTime.SECONDS,
+        device_class=SensorDeviceClass.DURATION,
+        suggested_unit=suggested_unit,
+        precision=0 if suggested_unit is UnitOfTime.MINUTES else 1,
+        enabled=enabled,
     )
 
 
-SENSORS: tuple[MyGarminSensorDescription, ...] = (
-    _counter("steps", "totalSteps", UNIT_STEPS),
-    MyGarminSensorDescription(
-        key="step_goal",
-        translation_key="step_goal",
-        native_unit_of_measurement=UNIT_STEPS,
-        value_fn=_measure("dailyStepGoal"),
-    ),
-    _counter(
-        "distance",
-        "totalDistanceMeters",
+def _distance(
+    key: str, field: str, *, enabled: bool = True
+) -> MyGarminSensorDescription:
+    """Metres travelled today, shown in kilometres."""
+    return _counter(
+        key,
+        field,
         UnitOfLength.METERS,
         device_class=SensorDeviceClass.DISTANCE,
         suggested_unit=UnitOfLength.KILOMETERS,
         precision=2,
-    ),
-    _counter("active_calories", "activeKilocalories", UNIT_KCAL),
-    _counter(
-        "total_calories",
-        "totalKilocalories",
-        UNIT_KCAL,
-        enabled=False,
-    ),
+        enabled=enabled,
+    )
+
+
+def _percentage(
+    key: str, field: str, *, enabled: bool = True
+) -> MyGarminSensorDescription:
+    return _number(key, field, PERCENTAGE, enabled=enabled)
+
+
+SENSORS: tuple[MyGarminSensorDescription, ...] = (
+    _counter("steps", "totalSteps", UNIT_STEPS),
+    _goal("step_goal", "dailyStepGoal", UNIT_STEPS),
+    _distance("distance", "totalDistanceMeters"),
+    _distance("wellness_distance", "wellnessDistanceMeters", enabled=False),
+    # Activity time
+    _time_spent("highly_active_time", "highlyActiveSeconds"),
+    _time_spent("active_time", "activeSeconds"),
+    _time_spent("sedentary_time", "sedentarySeconds", UnitOfTime.HOURS),
+    _time_spent("sleeping_time", "sleepingSeconds", UnitOfTime.HOURS, enabled=False),
     MyGarminSensorDescription(
         key="intensity_minutes",
         translation_key="intensity_minutes",
@@ -198,55 +267,138 @@ SENSORS: tuple[MyGarminSensorDescription, ...] = (
         state_class=SensorStateClass.TOTAL_INCREASING,
         value_fn=_intensity_minutes,
     ),
+    _goal(
+        "intensity_minutes_goal",
+        "intensityMinutesGoal",
+        UnitOfTime.MINUTES,
+        device_class=SensorDeviceClass.DURATION,
+    ),
+    # Floors
+    _counter("floors_ascended", "floorsAscended", UNIT_FLOORS, precision=0),
+    _counter("floors_descended", "floorsDescended", UNIT_FLOORS, precision=0),
+    _goal("floors_goal", "userFloorsAscendedGoal", UNIT_FLOORS),
     _counter(
-        "floors_ascended",
-        "floorsAscended",
-        UNIT_FLOORS,
+        "floors_ascended_distance",
+        "floorsAscendedInMeters",
+        UnitOfLength.METERS,
+        device_class=SensorDeviceClass.DISTANCE,
         precision=0,
+        enabled=False,
     ),
+    _counter(
+        "floors_descended_distance",
+        "floorsDescendedInMeters",
+        UnitOfLength.METERS,
+        device_class=SensorDeviceClass.DISTANCE,
+        precision=0,
+        enabled=False,
+    ),
+    # Calories
+    _counter("active_calories", "activeKilocalories", UNIT_KCAL),
+    _counter("total_calories", "totalKilocalories", UNIT_KCAL, enabled=False),
+    _counter("bmr_calories", "bmrKilocalories", UNIT_KCAL, enabled=False),
+    # Logged food can be deleted: not a total that only grows.
+    _number("consumed_calories", "consumedKilocalories", UNIT_KCAL, enabled=False),
+    _number(
+        "remaining_calories",
+        "remainingKilocalories",
+        UNIT_KCAL,
+        signed=True,
+        enabled=False,
+    ),
+    _goal("net_calorie_goal", "netCalorieGoal", UNIT_KCAL, enabled=False),
+    # Wheelchair
+    _counter("pushes", "totalPushes", UNIT_PUSHES, enabled=False),
+    _distance("push_distance", "totalPushDistance", enabled=False),
+    _goal("push_goal", "dailyPushesGoal", UNIT_PUSHES, enabled=False),
+    # Heart rate
     _reading("resting_heart_rate", "restingHeartRate", UNIT_BPM),
-    _reading(
-        "min_heart_rate",
-        "minHeartRate",
-        UNIT_BPM,
+    _reading("resting_heart_rate_7_days", "lastSevenDaysAvgRestingHeartRate", UNIT_BPM),
+    _reading("min_heart_rate", "minHeartRate", UNIT_BPM, enabled=False),
+    _reading("max_heart_rate", "maxHeartRate", UNIT_BPM, enabled=False),
+    _reading("min_avg_heart_rate", "minAvgHeartRate", UNIT_BPM, enabled=False),
+    _reading("max_avg_heart_rate", "maxAvgHeartRate", UNIT_BPM, enabled=False),
+    _counter("abnormal_heart_rate_alerts", "abnormalHeartRateAlertsCount"),
+    # Stress: -1 and -2 mean "not enough data"; 0 is a genuine, calm reading.
+    _number("average_stress", "averageStressLevel"),
+    _number("max_stress", "maxStressLevel"),
+    MyGarminSensorDescription(
+        key="stress_category",
+        translation_key="stress_category",
+        device_class=SensorDeviceClass.ENUM,
+        options=STRESS_CATEGORIES,
+        value_fn=_stress_category,
+    ),
+    _time_spent("rest_stress_duration", "restStressDuration"),
+    _time_spent("low_stress_duration", "lowStressDuration"),
+    _time_spent("medium_stress_duration", "mediumStressDuration"),
+    _time_spent("high_stress_duration", "highStressDuration"),
+    _time_spent("stress_duration", "stressDuration", enabled=False),
+    _time_spent("activity_stress_duration", "activityStressDuration", enabled=False),
+    _time_spent(
+        "uncategorized_stress_duration", "uncategorizedStressDuration", enabled=False
+    ),
+    _time_spent("total_stress_duration", "totalStressDuration", enabled=False),
+    _percentage("stress_percentage", "stressPercentage", enabled=False),
+    _percentage("rest_stress_percentage", "restStressPercentage", enabled=False),
+    _percentage(
+        "activity_stress_percentage", "activityStressPercentage", enabled=False
+    ),
+    _percentage(
+        "uncategorized_stress_percentage",
+        "uncategorizedStressPercentage",
         enabled=False,
     ),
-    _reading(
-        "max_heart_rate",
-        "maxHeartRate",
-        UNIT_BPM,
+    _percentage("low_stress_percentage", "lowStressPercentage", enabled=False),
+    _percentage("medium_stress_percentage", "mediumStressPercentage", enabled=False),
+    _percentage("high_stress_percentage", "highStressPercentage", enabled=False),
+    _time_spent(
+        "measurable_awake_time",
+        "measurableAwakeDuration",
+        UnitOfTime.HOURS,
         enabled=False,
     ),
-    MyGarminSensorDescription(
-        key="average_stress",
-        translation_key="average_stress",
-        state_class=SensorStateClass.MEASUREMENT,
-        # -1 and -2 mean "not enough data"; 0 is a genuine, calm reading.
-        value_fn=_measure("averageStressLevel"),
+    _time_spent(
+        "measurable_asleep_time",
+        "measurableAsleepDuration",
+        UnitOfTime.HOURS,
+        enabled=False,
     ),
-    MyGarminSensorDescription(
-        key="body_battery",
-        translation_key="body_battery",
-        native_unit_of_measurement=PERCENTAGE,
-        state_class=SensorStateClass.MEASUREMENT,
-        value_fn=_measure("bodyBatteryMostRecentValue"),
-    ),
-    MyGarminSensorDescription(
-        key="body_battery_highest",
-        translation_key="body_battery_highest",
-        native_unit_of_measurement=PERCENTAGE,
-        state_class=SensorStateClass.MEASUREMENT,
-        value_fn=_measure("bodyBatteryHighestValue"),
-    ),
-    MyGarminSensorDescription(
-        key="body_battery_lowest",
-        translation_key="body_battery_lowest",
-        native_unit_of_measurement=PERCENTAGE,
-        state_class=SensorStateClass.MEASUREMENT,
-        value_fn=_measure("bodyBatteryLowestValue"),
-    ),
+    # Body Battery
+    _percentage("body_battery", "bodyBatteryMostRecentValue"),
+    _percentage("body_battery_highest", "bodyBatteryHighestValue"),
+    _percentage("body_battery_lowest", "bodyBatteryLowestValue"),
+    _counter("body_battery_charged", "bodyBatteryChargedValue", PERCENTAGE),
+    _counter("body_battery_drained", "bodyBatteryDrainedValue", PERCENTAGE),
+    _percentage("body_battery_during_sleep", "bodyBatteryDuringSleep"),
+    _percentage("body_battery_at_wake", "bodyBatteryAtWakeTime"),
+    # Respiration and SpO2
     _reading("respiration", "avgWakingRespirationValue", UNIT_BREATHS),
+    _reading("respiration_latest", "latestRespirationValue", UNIT_BREATHS),
+    _reading(
+        "respiration_highest", "highestRespirationValue", UNIT_BREATHS, enabled=False
+    ),
+    _reading(
+        "respiration_lowest", "lowestRespirationValue", UNIT_BREATHS, enabled=False
+    ),
     _reading("spo2", "averageSpo2", PERCENTAGE),
+    _reading("spo2_lowest", "lowestSpo2", PERCENTAGE),
+    _reading("spo2_latest", "latestSpo2", PERCENTAGE),
+    # Hydration
+    _counter(
+        "hydration_intake",
+        "hydrationValueInML",
+        UnitOfVolume.MILLILITERS,
+        device_class=SensorDeviceClass.VOLUME,
+        enabled=False,
+    ),
+    _goal(
+        "hydration_goal",
+        "hydrationGoalInML",
+        UnitOfVolume.MILLILITERS,
+        device_class=SensorDeviceClass.VOLUME,
+        enabled=False,
+    ),
     MyGarminSensorDescription(
         key="last_sync",
         translation_key="last_sync",

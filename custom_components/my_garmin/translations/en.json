@@ -54,6 +54,16 @@
     }
   },
   "entity": {
+    "binary_sensor": {
+      "jet_lag": {
+        "name": "Jet lag",
+        "state_attributes": {
+          "trip_name": {
+            "name": "Trip"
+          }
+        }
+      }
+    },
     "sensor": {
       "steps": {
         "name": "Steps"
@@ -138,6 +148,169 @@
       },
       "wake_time": {
         "name": "Wake-up time"
+      },
+      "wellness_distance": {
+        "name": "Wellness distance"
+      },
+      "highly_active_time": {
+        "name": "Highly active time"
+      },
+      "active_time": {
+        "name": "Active time"
+      },
+      "sedentary_time": {
+        "name": "Sedentary time"
+      },
+      "sleeping_time": {
+        "name": "Sleeping time"
+      },
+      "intensity_minutes_goal": {
+        "name": "Weekly intensity minutes goal"
+      },
+      "floors_descended": {
+        "name": "Floors descended"
+      },
+      "floors_goal": {
+        "name": "Floors goal"
+      },
+      "floors_ascended_distance": {
+        "name": "Height climbed"
+      },
+      "floors_descended_distance": {
+        "name": "Height descended"
+      },
+      "bmr_calories": {
+        "name": "Resting calories"
+      },
+      "consumed_calories": {
+        "name": "Calories consumed"
+      },
+      "remaining_calories": {
+        "name": "Calories remaining"
+      },
+      "net_calorie_goal": {
+        "name": "Net calorie goal"
+      },
+      "pushes": {
+        "name": "Pushes"
+      },
+      "push_distance": {
+        "name": "Push distance"
+      },
+      "push_goal": {
+        "name": "Pushes goal"
+      },
+      "resting_heart_rate_7_days": {
+        "name": "Resting heart rate (7-day average)"
+      },
+      "min_avg_heart_rate": {
+        "name": "Lowest 2-minute heart rate"
+      },
+      "max_avg_heart_rate": {
+        "name": "Highest 2-minute heart rate"
+      },
+      "abnormal_heart_rate_alerts": {
+        "name": "Abnormal heart rate alerts"
+      },
+      "max_stress": {
+        "name": "Maximum stress"
+      },
+      "rest_stress_duration": {
+        "name": "Rest time"
+      },
+      "low_stress_duration": {
+        "name": "Low stress time"
+      },
+      "medium_stress_duration": {
+        "name": "Medium stress time"
+      },
+      "high_stress_duration": {
+        "name": "High stress time"
+      },
+      "stress_duration": {
+        "name": "Stress time"
+      },
+      "activity_stress_duration": {
+        "name": "Activity time (stress)"
+      },
+      "uncategorized_stress_duration": {
+        "name": "Unrated stress time"
+      },
+      "total_stress_duration": {
+        "name": "Total stress measurement time"
+      },
+      "stress_percentage": {
+        "name": "Stress share"
+      },
+      "rest_stress_percentage": {
+        "name": "Rest share"
+      },
+      "activity_stress_percentage": {
+        "name": "Activity share (stress)"
+      },
+      "uncategorized_stress_percentage": {
+        "name": "Unrated stress share"
+      },
+      "low_stress_percentage": {
+        "name": "Low stress share"
+      },
+      "medium_stress_percentage": {
+        "name": "Medium stress share"
+      },
+      "high_stress_percentage": {
+        "name": "High stress share"
+      },
+      "measurable_awake_time": {
+        "name": "Measured awake time"
+      },
+      "measurable_asleep_time": {
+        "name": "Measured asleep time"
+      },
+      "body_battery_charged": {
+        "name": "Body Battery charged"
+      },
+      "body_battery_drained": {
+        "name": "Body Battery drained"
+      },
+      "body_battery_during_sleep": {
+        "name": "Body Battery during sleep"
+      },
+      "body_battery_at_wake": {
+        "name": "Body Battery at wake-up"
+      },
+      "respiration_latest": {
+        "name": "Latest respiration rate"
+      },
+      "respiration_highest": {
+        "name": "Highest respiration rate"
+      },
+      "respiration_lowest": {
+        "name": "Lowest respiration rate"
+      },
+      "spo2_lowest": {
+        "name": "Lowest SpO2"
+      },
+      "spo2_latest": {
+        "name": "Latest SpO2"
+      },
+      "hydration_intake": {
+        "name": "Hydration"
+      },
+      "hydration_goal": {
+        "name": "Hydration goal"
+      },
+      "stress_category": {
+        "name": "Stress category",
+        "state": {
+          "calm": "Calm",
+          "balanced": "Balanced",
+          "stressful": "Stressful",
+          "very_stressful": "Very stressful",
+          "calm_awake": "Calm (awake)",
+          "balanced_awake": "Balanced (awake)",
+          "stressful_awake": "Stressful (awake)",
+          "very_stressful_awake": "Very stressful (awake)"
+        }
       }
     }
   }

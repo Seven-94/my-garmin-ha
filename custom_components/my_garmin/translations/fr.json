@@ -54,6 +54,16 @@
     }
   },
   "entity": {
+    "binary_sensor": {
+      "jet_lag": {
+        "name": "Décalage horaire",
+        "state_attributes": {
+          "trip_name": {
+            "name": "Voyage"
+          }
+        }
+      }
+    },
     "sensor": {
       "steps": {
         "name": "Pas"
@@ -138,6 +148,169 @@
       },
       "wake_time": {
         "name": "Lever"
+      },
+      "wellness_distance": {
+        "name": "Distance bien-être"
+      },
+      "highly_active_time": {
+        "name": "Temps très actif"
+      },
+      "active_time": {
+        "name": "Temps actif"
+      },
+      "sedentary_time": {
+        "name": "Temps sédentaire"
+      },
+      "sleeping_time": {
+        "name": "Temps de sommeil"
+      },
+      "intensity_minutes_goal": {
+        "name": "Objectif hebdomadaire de minutes d'intensité"
+      },
+      "floors_descended": {
+        "name": "Étages descendus"
+      },
+      "floors_goal": {
+        "name": "Objectif d'étages"
+      },
+      "floors_ascended_distance": {
+        "name": "Dénivelé d'étages montés"
+      },
+      "floors_descended_distance": {
+        "name": "Dénivelé d'étages descendus"
+      },
+      "bmr_calories": {
+        "name": "Calories au repos"
+      },
+      "consumed_calories": {
+        "name": "Calories consommées"
+      },
+      "remaining_calories": {
+        "name": "Calories restantes"
+      },
+      "net_calorie_goal": {
+        "name": "Objectif calorique net"
+      },
+      "pushes": {
+        "name": "Poussées"
+      },
+      "push_distance": {
+        "name": "Distance en fauteuil"
+      },
+      "push_goal": {
+        "name": "Objectif de poussées"
+      },
+      "resting_heart_rate_7_days": {
+        "name": "Fréquence cardiaque au repos (moyenne sur 7 jours)"
+      },
+      "min_avg_heart_rate": {
+        "name": "Fréquence cardiaque minimale sur 2 minutes"
+      },
+      "max_avg_heart_rate": {
+        "name": "Fréquence cardiaque maximale sur 2 minutes"
+      },
+      "abnormal_heart_rate_alerts": {
+        "name": "Alertes de fréquence cardiaque anormale"
+      },
+      "max_stress": {
+        "name": "Stress maximal"
+      },
+      "rest_stress_duration": {
+        "name": "Temps de repos"
+      },
+      "low_stress_duration": {
+        "name": "Temps de stress faible"
+      },
+      "medium_stress_duration": {
+        "name": "Temps de stress moyen"
+      },
+      "high_stress_duration": {
+        "name": "Temps de stress élevé"
+      },
+      "stress_duration": {
+        "name": "Temps de stress"
+      },
+      "activity_stress_duration": {
+        "name": "Temps d'activité (stress)"
+      },
+      "uncategorized_stress_duration": {
+        "name": "Temps de stress non évalué"
+      },
+      "total_stress_duration": {
+        "name": "Durée totale de mesure du stress"
+      },
+      "stress_percentage": {
+        "name": "Part de stress"
+      },
+      "rest_stress_percentage": {
+        "name": "Part de repos"
+      },
+      "activity_stress_percentage": {
+        "name": "Part d'activité (stress)"
+      },
+      "uncategorized_stress_percentage": {
+        "name": "Part de stress non évalué"
+      },
+      "low_stress_percentage": {
+        "name": "Part de stress faible"
+      },
+      "medium_stress_percentage": {
+        "name": "Part de stress moyen"
+      },
+      "high_stress_percentage": {
+        "name": "Part de stress élevé"
+      },
+      "measurable_awake_time": {
+        "name": "Temps d'éveil mesuré"
+      },
+      "measurable_asleep_time": {
+        "name": "Temps de sommeil mesuré"
+      },
+      "body_battery_charged": {
+        "name": "Body Battery rechargée"
+      },
+      "body_battery_drained": {
+        "name": "Body Battery déchargée"
+      },
+      "body_battery_during_sleep": {
+        "name": "Body Battery pendant le sommeil"
+      },
+      "body_battery_at_wake": {
+        "name": "Body Battery au réveil"
+      },
+      "respiration_latest": {
+        "name": "Dernière fréquence respiratoire"
+      },
+      "respiration_highest": {
+        "name": "Fréquence respiratoire maximale"
+      },
+      "respiration_lowest": {
+        "name": "Fréquence respiratoire minimale"
+      },
+      "spo2_lowest": {
+        "name": "SpO2 la plus basse"
+      },
+      "spo2_latest": {
+        "name": "Dernière SpO2"
+      },
+      "hydration_intake": {
+        "name": "Hydratation"
+      },
+      "hydration_goal": {
+        "name": "Objectif d'hydratation"
+      },
+      "stress_category": {
+        "name": "Catégorie de stress",
+        "state": {
+          "calm": "Calme",
+          "balanced": "Équilibré",
+          "stressful": "Stressant",
+          "very_stressful": "Très stressant",
+          "calm_awake": "Calme (éveil)",
+          "balanced_awake": "Équilibré (éveil)",
+          "stressful_awake": "Stressant (éveil)",
+          "very_stressful_awake": "Très stressant (éveil)"
+        }
       }
     }
   }
