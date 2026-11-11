@@ -6,11 +6,20 @@ from datetime import date
 from typing import Any
 
 import probatio
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
+from homeassistant.config_entries import (
+    ConfigEntry,
+    ConfigFlow,
+    ConfigFlowResult,
+    OptionsFlowWithReload,
+)
 from homeassistant.const import CONF_API_KEY
+from homeassistant.core import callback
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.selector import (
     DateSelector,
+    NumberSelector,
+    NumberSelectorConfig,
+    NumberSelectorMode,
     TextSelector,
     TextSelectorConfig,
     TextSelectorType,
@@ -24,7 +33,15 @@ from .api import (
     GarminPersonalClient,
     GarminRateLimitError,
 )
-from .const import CONF_KEY_EXPIRES, DOMAIN, TITLE
+from .const import (
+    CONF_DAILY_INTERVAL_MINUTES,
+    CONF_KEY_EXPIRES,
+    CONF_SYNC_OVERDUE_HOURS,
+    DEFAULT_DAILY_INTERVAL_MINUTES,
+    DEFAULT_SYNC_OVERDUE_HOURS,
+    DOMAIN,
+    TITLE,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -42,6 +59,12 @@ class MyGarminConfigFlow(ConfigFlow, domain=DOMAIN):
     """Add, re-authenticate or reconfigure the Garmin account."""
 
     VERSION = 1
+
+    @staticmethod
+    @callback
+    def async_get_options_flow(config_entry: ConfigEntry) -> MyGarminOptionsFlow:
+        del config_entry
+        return MyGarminOptionsFlow()
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
@@ -128,3 +151,49 @@ class MyGarminConfigFlow(ConfigFlow, domain=DOMAIN):
         if not isinstance(profile_id, int) or isinstance(profile_id, bool):
             return None, {"base": "no_profile_id"}
         return str(profile_id), {}
+
+
+OPTIONS_SCHEMA = probatio.Schema(
+    {
+        probatio.Required(
+            CONF_SYNC_OVERDUE_HOURS, default=DEFAULT_SYNC_OVERDUE_HOURS
+        ): NumberSelector(
+            NumberSelectorConfig(
+                min=1,
+                max=168,
+                step=1,
+                unit_of_measurement="h",
+                mode=NumberSelectorMode.BOX,
+            )
+        ),
+        # Garmin publishes no quota: stay well clear of throttling.
+        probatio.Required(
+            CONF_DAILY_INTERVAL_MINUTES, default=DEFAULT_DAILY_INTERVAL_MINUTES
+        ): NumberSelector(
+            NumberSelectorConfig(
+                min=5,
+                max=60,
+                step=1,
+                unit_of_measurement="min",
+                mode=NumberSelectorMode.BOX,
+            )
+        ),
+    }
+)
+
+
+class MyGarminOptionsFlow(OptionsFlowWithReload):
+    """Sync overdue threshold and daily summary polling; saving reloads."""
+
+    async def async_step_init(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        if user_input is not None:
+            # The number selector returns floats: both options are whole.
+            return self.async_create_entry(
+                data={key: int(value) for key, value in user_input.items()}
+            )
+        schema = self.add_suggested_values_to_schema(
+            OPTIONS_SCHEMA, self.config_entry.options
+        )
+        return self.async_show_form(step_id="init", data_schema=schema)
