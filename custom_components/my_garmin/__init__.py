@@ -10,6 +10,7 @@ from .const import DOMAIN
 from .coordinator import (
     ActivitiesCoordinator,
     DailySummaryCoordinator,
+    HeartRateZonesCoordinator,
     HrvCoordinator,
     MyGarminData,
     SleepCoordinator,
@@ -55,6 +56,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: MyGarminConfigEntry) -> 
     await weight.async_refresh()
     activities = ActivitiesCoordinator(hass, entry, client)
     await activities.async_refresh()
+    heart_rate_zones = HeartRateZonesCoordinator(hass, entry, client)
+    await heart_rate_zones.async_refresh()
 
     entry.runtime_data = MyGarminData(
         client=client,
@@ -63,6 +66,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: MyGarminConfigEntry) -> 
         hrv=hrv,
         weight=weight,
         activities=activities,
+        heart_rate_zones=heart_rate_zones,
     )
     watcher = SyncWatcher(hass, daily, [sleep, hrv, weight, activities])
     entry.async_on_unload(daily.async_add_listener(watcher))

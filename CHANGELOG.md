@@ -53,6 +53,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - API key expiry: a diagnostic date sensor, and a repair issue a week before
   the date the user entered (warning), turning into an error once it has
   passed. Reconfiguring with a new key and date removes it.
+- Heart rate zone sensors, diagnostic and refreshed every six hours: maximum
+  and lactate threshold heart rates, resting heart rate, floors of zones 1 to
+  5 and training method, for the DEFAULT sport (the first sport when there is
+  none). Lactate threshold and training method are disabled by default; the
+  zones of the other sports are attributes.
 
 ### Changed
 

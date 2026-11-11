@@ -504,6 +504,39 @@
       },
       "key_expiry": {
         "name": "API key expiry"
+      },
+      "zones_max_heart_rate": {
+        "name": "Zones maximum heart rate"
+      },
+      "zones_lactate_threshold_heart_rate": {
+        "name": "Zones lactate threshold heart rate"
+      },
+      "zones_resting_heart_rate": {
+        "name": "Zones resting heart rate"
+      },
+      "zones_zone_1_floor": {
+        "name": "Zone 1 floor"
+      },
+      "zones_zone_2_floor": {
+        "name": "Zone 2 floor"
+      },
+      "zones_zone_3_floor": {
+        "name": "Zone 3 floor"
+      },
+      "zones_zone_4_floor": {
+        "name": "Zone 4 floor"
+      },
+      "zones_zone_5_floor": {
+        "name": "Zone 5 floor"
+      },
+      "zones_training_method": {
+        "name": "Zones training method",
+        "state": {
+          "hr_max": "Maximum heart rate",
+          "lactate_threshold": "Lactate threshold",
+          "hr_reserve": "Heart rate reserve",
+          "custom": "Custom"
+        }
       }
     },
     "event": {

@@ -227,6 +227,40 @@ async def test_get_activities_rejects_anything_but_a_list_of_objects(
         await client.get_activities(10)
 
 
+ZONES_PATH = "/biometric-service/heartRateZones/v2"
+
+
+async def test_get_heart_rate_zones_returns_every_sport(
+    client: GarminPersonalClient, fake_garmin: FakeGarmin
+) -> None:
+    body = '[{"sport": "DEFAULT", "maxHeartRateUsed": 186}, {"sport": "RUNNING"}]'
+    fake_garmin.data_replies[ZONES_PATH] = [Reply(body=body)]
+
+    assert await client.get_heart_rate_zones() == [
+        {"sport": "DEFAULT", "maxHeartRateUsed": 186},
+        {"sport": "RUNNING"},
+    ]
+
+
+@pytest.mark.parametrize("body", ["null", ""])
+async def test_get_heart_rate_zones_without_data_returns_an_empty_list(
+    client: GarminPersonalClient, fake_garmin: FakeGarmin, body: str
+) -> None:
+    fake_garmin.data_replies[ZONES_PATH] = [Reply(body=body)]
+
+    assert await client.get_heart_rate_zones() == []
+
+
+@pytest.mark.parametrize("body", ['{"sport": "DEFAULT"}', "[1, 2]"])
+async def test_get_heart_rate_zones_rejects_anything_but_a_list_of_objects(
+    client: GarminPersonalClient, fake_garmin: FakeGarmin, body: str
+) -> None:
+    fake_garmin.data_replies[ZONES_PATH] = [Reply(body=body)]
+
+    with pytest.raises(GarminApiError):
+        await client.get_heart_rate_zones()
+
+
 @pytest.mark.parametrize("body", ["<html>", "[1, 2]", ""])
 async def test_payload_that_is_not_a_json_object_raises_api_error(
     client: GarminPersonalClient, fake_garmin: FakeGarmin, body: str

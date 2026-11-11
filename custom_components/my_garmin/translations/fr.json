@@ -504,6 +504,39 @@
       },
       "key_expiry": {
         "name": "Expiration de la clé API"
+      },
+      "zones_max_heart_rate": {
+        "name": "Fréquence cardiaque maximale des zones"
+      },
+      "zones_lactate_threshold_heart_rate": {
+        "name": "Fréquence cardiaque au seuil lactique des zones"
+      },
+      "zones_resting_heart_rate": {
+        "name": "Fréquence cardiaque au repos des zones"
+      },
+      "zones_zone_1_floor": {
+        "name": "Plancher de la zone 1"
+      },
+      "zones_zone_2_floor": {
+        "name": "Plancher de la zone 2"
+      },
+      "zones_zone_3_floor": {
+        "name": "Plancher de la zone 3"
+      },
+      "zones_zone_4_floor": {
+        "name": "Plancher de la zone 4"
+      },
+      "zones_zone_5_floor": {
+        "name": "Plancher de la zone 5"
+      },
+      "zones_training_method": {
+        "name": "Méthode des zones de fréquence cardiaque",
+        "state": {
+          "hr_max": "Fréquence cardiaque maximale",
+          "lactate_threshold": "Seuil lactique",
+          "hr_reserve": "Réserve de fréquence cardiaque",
+          "custom": "Personnalisée"
+        }
       }
     },
     "event": {
