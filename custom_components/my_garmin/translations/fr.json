@@ -62,6 +62,9 @@
             "name": "Voyage"
           }
         }
+      },
+      "sync_overdue": {
+        "name": "Synchronisation de la montre en retard"
       }
     },
     "sensor": {
@@ -527,6 +530,21 @@
     "key_expired": {
       "title": "La clé API Garmin a expiré",
       "description": "La clé API personnelle Garmin a expiré le {expires} : les données Garmin ne sont plus mises à jour. Créez une nouvelle clé dans Garmin Connect, puis saisissez-la avec sa date d'expiration : Paramètres > Appareils et services > My Garmin > Reconfigurer."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Options",
+        "data": {
+          "sync_overdue_hours": "Synchronisation en retard après",
+          "daily_interval_minutes": "Intervalle de rafraîchissement du résumé du jour"
+        },
+        "data_description": {
+          "sync_overdue_hours": "Nombre d'heures sans synchronisation de la montre avant que le capteur de problème s'allume.",
+          "daily_interval_minutes": "Fréquence de lecture du résumé du jour, qui indique la dernière synchronisation. Garmin ne publie aucun quota : restez raisonnable."
+        }
+      }
     }
   }
 }
