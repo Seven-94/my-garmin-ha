@@ -1,4 +1,4 @@
-"""Fixtures wiring the client to the fake Garmin server."""
+"""Fixtures wiring the API client to the fake Garmin server."""
 
 from collections.abc import AsyncIterator
 

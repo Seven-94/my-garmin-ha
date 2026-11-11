@@ -44,6 +44,22 @@ every week.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for the contribution workflow.
 
+### Test fixtures
+
+Tests never call Garmin: they read anonymised copies of real responses in
+`tests/fixtures/`. To refresh them with your own account:
+
+```bash
+uv run python -m scripts.capture      # asks for your API key (hidden input)
+uv run python -m scripts.anonymise    # captures/ -> tests/fixtures/
+```
+
+`captures/` holds the raw responses, with personal data: it is ignored by Git.
+The anonymiser renumbers identifiers, replaces names, e-mails, URLs, GPS
+coordinates and demographic fields, and shifts every date by a random number
+of weeks. It writes nothing if an original value remains. Review the fixtures
+and `captures/keys.txt` before committing.
+
 ## Security
 
 Please report vulnerabilities privately: see [SECURITY.md](SECURITY.md).

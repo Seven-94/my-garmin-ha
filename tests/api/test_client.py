@@ -35,6 +35,15 @@ async def test_get_daily_summary_sends_the_calendar_date(
     assert summary == {"path": DAILY_PATH, "query": {"calendarDate": "2026-11-10"}}
 
 
+async def test_get_returns_any_json_shape(
+    client: GarminPersonalClient, fake_garmin: FakeGarmin
+) -> None:
+    fake_garmin.data_replies["/some-service/list"] = [Reply(body="[1, 2]")]
+
+    assert await client.get("/some-service/list", {"limit": "2"}) == [1, 2]
+    assert fake_garmin.requests[-1].query == {"limit": "2"}
+
+
 async def test_revoked_token_is_renewed_and_request_retried_once(
     client: GarminPersonalClient, fake_garmin: FakeGarmin
 ) -> None:
