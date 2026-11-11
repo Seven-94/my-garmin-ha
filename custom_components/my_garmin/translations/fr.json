@@ -459,6 +459,45 @@
           "unbalanced": "Déséquilibré",
           "balanced": "Équilibré"
         }
+      },
+      "weight": {
+        "name": "Poids"
+      },
+      "weight_change": {
+        "name": "Variation de poids"
+      },
+      "muscle_mass": {
+        "name": "Masse musculaire"
+      },
+      "bone_mass": {
+        "name": "Masse osseuse"
+      },
+      "bmi": {
+        "name": "IMC"
+      },
+      "body_fat": {
+        "name": "Masse grasse"
+      },
+      "body_water": {
+        "name": "Eau corporelle"
+      },
+      "visceral_fat": {
+        "name": "Graisse viscérale"
+      },
+      "metabolic_age": {
+        "name": "Âge métabolique"
+      },
+      "physique_rating": {
+        "name": "Indice physique"
+      },
+      "weight_goal": {
+        "name": "Objectif de poids"
+      },
+      "weight_goal_low": {
+        "name": "Objectif de poids, borne basse"
+      },
+      "weight_goal_high": {
+        "name": "Objectif de poids, borne haute"
       }
     }
   }

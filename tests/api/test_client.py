@@ -154,6 +154,47 @@ async def test_get_hrv_rejects_a_payload_that_is_not_an_object(
         await client.get_hrv(date(2026, 11, 10))
 
 
+async def test_get_weight_range_asks_for_every_weigh_in(
+    client: GarminPersonalClient,
+) -> None:
+    weights = await client.get_weight_range(date(2026, 11, 3), date(2026, 11, 10))
+
+    assert weights == {
+        "path": "/weight-service/weight/range/2026-11-03/2026-11-10",
+        "query": {"includeAll": "true"},
+    }
+
+
+async def test_get_weight_goal_puts_the_dates_in_the_path(
+    client: GarminPersonalClient,
+) -> None:
+    goal = await client.get_weight_goal(date(2026, 11, 10), date(2026, 11, 10))
+
+    assert goal == {
+        "path": "/goal-service/goal/user/effective/weightgoal/2026-11-10/2026-11-10",
+        "query": {},
+    }
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        "/weight-service/weight/range/2026-11-10/2026-11-10",
+        "/goal-service/goal/user/effective/weightgoal/2026-11-10/2026-11-10",
+    ],
+)
+async def test_weight_endpoints_without_data_return_an_empty_object(
+    client: GarminPersonalClient, fake_garmin: FakeGarmin, path: str
+) -> None:
+    fake_garmin.data_replies[path] = [Reply(body="null")]
+    day = date(2026, 11, 10)
+
+    if "goal" in path:
+        assert await client.get_weight_goal(day, day) == {}
+    else:
+        assert await client.get_weight_range(day, day) == {}
+
+
 @pytest.mark.parametrize("body", ["<html>", "[1, 2]", ""])
 async def test_payload_that_is_not_a_json_object_raises_api_error(
     client: GarminPersonalClient, fake_garmin: FakeGarmin, body: str

@@ -31,6 +31,10 @@ _LOGGER = logging.getLogger(__name__)
 DAILY_INTERVAL = timedelta(minutes=10)
 # Safety net for data that may change without a watch sync, or a missed one.
 NIGHT_INTERVAL = timedelta(hours=2)
+# Scales upload weigh-ins on their own, without a watch sync.
+WEIGHT_INTERVAL = timedelta(hours=1)
+# The range response also carries the last weigh-in before it: a week is enough.
+WEIGHT_DAYS = 7
 # Garmin publishes no quota and may throttle without notice: after a 429, stay
 # away for at least this long, or longer if Garmin says so.
 RATE_LIMIT_BACKOFF = 30 * 60.0
@@ -182,6 +186,50 @@ class HrvCoordinator(LastNightCoordinator):
         )
 
 
+def latest_weigh_in(data: JsonObject) -> JsonObject:
+    """The most recent weigh-in of a weight range response, or {}."""
+    days = data.get("dailyWeightSummaries")
+    candidates = (
+        [day.get("latestWeight") for day in days if isinstance(day, dict)]
+        if isinstance(days, list)
+        else []
+    )
+    candidates.append(data.get("previousDateWeight"))
+    weigh_ins = [w for w in candidates if isinstance(w, dict)]
+    # Days come newest first in practice; the date says it for sure.
+    return max(weigh_ins, key=lambda w: str(w.get("calendarDate") or ""), default={})
+
+
+class WeightCoordinator(MyGarminCoordinator):
+    """The latest weigh-in and the weight goal, refreshed every hour."""
+
+    def __init__(
+        self,
+        hass: HomeAssistant,
+        entry: ConfigEntry[MyGarminData],
+        client: GarminPersonalClient,
+    ) -> None:
+        super().__init__(
+            hass,
+            entry,
+            client,
+            name="weight",
+            update_interval=WEIGHT_INTERVAL,
+            fetch=self._async_fetch_weight,
+        )
+
+    async def _async_fetch_weight(self, day: date) -> JsonObject:
+        start = day - timedelta(days=WEIGHT_DAYS - 1)
+        weigh_in = latest_weigh_in(await self.client.get_weight_range(start, day))
+        try:
+            goal = await self.client.get_weight_goal(day, day)
+        except GarminApiError as err:
+            # A goal is optional: its failure must not hide the weigh-in.
+            _LOGGER.debug("No weight goal: %s", err)
+            goal = {}
+        return {"weigh_in": weigh_in, "goal": goal}
+
+
 def _last_sync(coordinator: DailySummaryCoordinator) -> object:
     return (coordinator.data or {}).get("lastSyncTimestampGMT")
 
@@ -218,3 +266,4 @@ class MyGarminData:
     daily: DailySummaryCoordinator
     sleep: SleepCoordinator
     hrv: HrvCoordinator
+    weight: WeightCoordinator

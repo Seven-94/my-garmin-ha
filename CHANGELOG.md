@@ -39,6 +39,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   night average, 7-day average, last night 5-minute high (disabled by default)
   and HRV status, with the baseline bounds and the feedback code as attributes.
   Devices without HRV get unknown values, without errors or log entries.
+- Weight sensors for the latest weigh-in, refreshed after each watch sync and
+  every hour: weight, weight change, muscle mass, BMI, body fat and body water;
+  bone mass, visceral fat, metabolic age and physique rating are disabled by
+  default. Garmin sends masses in grams although its spec says kilograms: both
+  are handled. Weight goal, with its low and high bounds disabled by default.
 
 ### Changed
 
