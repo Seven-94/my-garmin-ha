@@ -54,7 +54,8 @@ the commit: stage the changes and commit again.
 - No network access in tests: never call Garmin. Use fixtures.
 - Fixtures keep the shape of real API responses but no real data: identifiers,
   names, e-mails, URLs, GPS and demographic fields are replaced, timestamps are
-  shifted, and every measurement is synthetic. Generate them with
+  shifted (times of sleep, activities and weigh-ins also lose their real time
+  of day), and every measurement is synthetic. Generate them with
   `scripts/anonymise.py`; never commit a real measurement, even anonymised.
   Raw captures stay in the ignored `captures/` directory.
 - Total branch coverage must stay at or above 80 % (`fail_under`).

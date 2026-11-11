@@ -57,8 +57,9 @@ uv run python -m scripts.anonymise    # captures/ -> tests/fixtures/
 `captures/` holds the raw responses, with personal data: it is ignored by Git.
 The anonymiser renumbers identifiers, replaces names, e-mails, URLs, GPS
 coordinates and demographic fields, shifts every date by a random number of
-weeks, and replaces every measurement with a synthetic value of the same
-format: no real health data is committed. It writes nothing if an original
+weeks, moves the times of sleep, activities, latest readings and weigh-ins by
+a random 1 to 4 hours, and replaces every measurement with a synthetic value
+of the same format: no real health data or daily habit is committed. It writes nothing if an original
 value remains. Review the fixtures and `captures/keys.txt` before committing.
 
 ## Security

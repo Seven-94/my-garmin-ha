@@ -17,6 +17,9 @@ synthetic value with the same type, sign, number of digits and decimals: no
 real health data reaches the repository, yet parsers see the same formats.
 Null, zero and negative values are kept, as Garmin uses them for "not
 measured"; so are catalogue numbers (type IDs, indexes, versions, formats).
+Times that reveal habits (sleep, activities, latest readings, sync, weigh-in)
+also move by a random 1 to 4 hours, one offset per JSON object, so that start
+and end, GMT and local stay coherent.
 """
 
 import argparse
@@ -27,7 +30,7 @@ import re
 import secrets
 import sys
 from dataclasses import dataclass, field
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from enum import Enum, auto
 from pathlib import Path
 from typing import Literal
@@ -49,6 +52,15 @@ _LONGITUDE_KEY = re.compile(r"(?:[Ll]ongitude|^lon$|^lng$|Lon$|Lng$)")
 # Numbers that describe the data rather than the body: kept as they are.
 _KEPT_NUMBER_KEY = re.compile(r"(?:[Tt]ype|[Ii]ndex|^sortOrder$|[Vv]ersion|[Ff]ormat)")
 _EPOCH_SECONDS_KEY = re.compile(r"(?i)(?:time|date|stamp|epoch|seconds)")
+# Times of day that tell when someone sleeps, trains, syncs or weighs in.
+# Day boundaries (startTimestampGMT, wellnessStartTime...) are not listed.
+_EVENT_KEY = re.compile(
+    r"(?:[Ss]leep(?:Start|End)Timestamp|^beginTimestamp$"
+    r"|^(?:start|end)Time(?:GMT|Local)$|^latest\w*Time"
+    r"|^(?:uploadedDate|lastUpdateDate|lastUpdated|lastSyncTimestampGMT"
+    r"|timestampGMT|date)$)"
+)
+_DATETIME = re.compile(r"^(\d{4}-\d{2}-\d{2})([T ])(\d{2}:\d{2}:\d{2})(.*)$")
 _DATE_PREFIX = re.compile(r"^(\d{4}-\d{2}-\d{2})(?=$|[T ])")
 _DATE_ANYWHERE = re.compile(r"\d{4}-\d{2}-\d{2}")
 _EMAIL = re.compile(r"[\w.+-]+@[\w-]+(?:\.[\w-]+)+")
@@ -77,6 +89,7 @@ _MIN_SUBSTRING_LEN = 6
 # Small numeric "ids" are list indexes, not identifiers.
 _MIN_ID = 1_000
 _MAX_DECIMALS = 6
+_EVENT_OFFSET_MINUTES = (60, 240)
 
 CAPTURE_INDEX = "index.json"
 
@@ -114,11 +127,18 @@ class Anonymiser:
     def anonymise(self, doc: Json) -> Json:
         return self._walk(None, doc)
 
-    def _walk(self, key: str | None, value: Json) -> Json:
+    def _walk(self, key: str | None, value: Json, minutes: int = 0) -> Json:
+        """Anonymise value; minutes moves it when it is an event time."""
         if isinstance(value, dict):
-            return {k: self._walk(k, v) for k, v in value.items()}
+            # One offset per object: an activity's start and end move together,
+            # and two activities do not share an offset.
+            offset = self._event_offset() if any(map(_EVENT_KEY.search, value)) else 0
+            return {
+                k: self._walk(k, v, offset if _EVENT_KEY.search(k) else 0)
+                for k, v in value.items()
+            }
         if isinstance(value, list):
-            return [self._walk(key, v) for v in value]
+            return [self._walk(key, v, minutes) for v in value]
         if value is None or isinstance(value, bool):
             return value
         if key is not None:
@@ -128,8 +148,8 @@ class Anonymiser:
                     self._remember(value)
                 return replaced
         if isinstance(value, str):
-            return self._string(value)
-        return self._number(key, value)
+            return self._string(value, minutes)
+        return self._number(key, value, minutes)
 
     def _by_key(self, key: str, value: int | float | str) -> _RuleResult:
         """Return the replacement a key rule dictates, or _Rule.NONE."""
@@ -169,23 +189,36 @@ class Anonymiser:
         if isinstance(value, str):
             self._original_dates.update(_DATE_ANYWHERE.findall(value))
 
-    def _string(self, value: str) -> str:
+    def _event_offset(self) -> int:
+        low, high = _EVENT_OFFSET_MINUTES
+        minutes = low + int(self._draw() * (high - low + 1))
+        return minutes if self._draw() < 0.5 else -minutes
+
+    def _string(self, value: str, minutes: int = 0) -> str:
         self._original_dates.update(_DATE_ANYWHERE.findall(value))
         for email in _EMAIL.findall(value):
             self._originals.add(email)
         value = _EMAIL.sub(FAKE_EMAIL, value)
+        moment = _DATETIME.match(value)
+        if moment is not None and minutes:
+            when = datetime.fromisoformat(f"{moment[1]}T{moment[3]}")
+            when += timedelta(days=self.shift_days, minutes=minutes)
+            day, time = when.isoformat().split("T")
+            return f"{day}{moment[2]}{time}{moment[4]}"
         match = _DATE_PREFIX.match(value)
         if match is None:
             return value
         shifted = date.fromisoformat(match[1]) + timedelta(days=self.shift_days)
         return shifted.isoformat() + value[match.end() :]
 
-    def _number(self, key: str | None, value: int | float) -> int | float:
+    def _number(
+        self, key: str | None, value: int | float, minutes: int = 0
+    ) -> int | float:
         if _EPOCH_MS[0] <= value <= _EPOCH_MS[1]:
-            return value + self.shift_days * 86_400_000
+            return value + self.shift_days * 86_400_000 + minutes * 60_000
         is_time_key = key is not None and _EPOCH_SECONDS_KEY.search(key)
         if is_time_key and _EPOCH_S[0] <= value <= _EPOCH_S[1]:
-            return value + self.shift_days * 86_400
+            return value + self.shift_days * 86_400 + minutes * 60
         if key is not None and _KEPT_NUMBER_KEY.search(key):
             return value
         return self._synthetic(value)

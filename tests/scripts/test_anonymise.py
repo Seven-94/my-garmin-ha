@@ -1,6 +1,7 @@
 """Anonymisation of captured Garmin responses before they become fixtures."""
 
 import json
+from datetime import datetime
 from pathlib import Path
 
 import pytest
@@ -108,9 +109,9 @@ def test_dates_and_timestamps_are_shifted(anonymiser: Anonymiser) -> None:
     result = anonymiser.anonymise(
         {
             "calendarDate": "2026-11-10",
-            "startTimeLocal": "2026-11-10T06:12:00.0",
-            "startTimeGMT": "2026-11-10 05:12:00",
-            "lastSyncTimestampGMT": 1_794_290_000_000,
+            "startTimestampLocal": "2026-11-10T06:12:00.0",
+            "startTimestampGMT": "2026-11-10 05:12:00",
+            "until": 1_794_290_000_000,
             "startTimeInSeconds": 1_794_290_000,
             "bodyBatteryValuesArray": [[1_794_290_000_000, 42]],
         }
@@ -118,9 +119,9 @@ def test_dates_and_timestamps_are_shifted(anonymiser: Anonymiser) -> None:
 
     assert isinstance(result, dict)
     assert result["calendarDate"] == "2026-12-08"
-    assert result["startTimeLocal"] == "2026-12-08T06:12:00.0"
-    assert result["startTimeGMT"] == "2026-12-08 05:12:00"
-    assert result["lastSyncTimestampGMT"] == 1_794_290_000_000 + SHIFT * DAY_MS
+    assert result["startTimestampLocal"] == "2026-12-08T06:12:00.0"
+    assert result["startTimestampGMT"] == "2026-12-08 05:12:00"
+    assert result["until"] == 1_794_290_000_000 + SHIFT * DAY_MS
     assert result["startTimeInSeconds"] == 1_794_290_000 + SHIFT * 86_400
     shifted = 1_794_290_000_000 + SHIFT * DAY_MS
     assert number(result, "bodyBatteryValuesArray", 0, 0) == shifted
@@ -340,3 +341,76 @@ def test_distinctive_replaced_numbers_are_still_tracked(
     leaks = find_leaks(anonymiser, {"doc.json": {"a": 43.6123, "b": 987654321}})
 
     assert leaks == ["doc.json: $.a", "doc.json: $.b"]
+
+
+def _moved_minutes(before: str, after: str) -> float:
+    """Minutes between two datetimes, the week shift taken out."""
+    moved = datetime.fromisoformat(after) - datetime.fromisoformat(before)
+    return moved.total_seconds() / 60 - SHIFT * 24 * 60
+
+
+def test_sleep_times_move_together_by_one_to_four_hours(
+    anonymiser: Anonymiser,
+) -> None:
+    sleep = {
+        "sleepStartTimestampGMT": "2026-11-09T22:10:00.0",
+        "sleepStartTimestampLocal": "2026-11-09T23:10:00.0",
+        "sleepEndTimestampGMT": "2026-11-10T05:40:00.0",
+        "sleepEndTimestampLocal": "2026-11-10T06:40:00.0",
+    }
+
+    result = anonymiser.anonymise(dict(sleep))
+
+    assert isinstance(result, dict)
+    moves = {_moved_minutes(sleep[k], str(result[k])) for k in sleep}
+    # One offset for the whole night: start, end and GMT/local stay coherent.
+    assert len(moves) == 1
+    assert 60 <= abs(moves.pop()) <= 240
+
+
+def test_epoch_sleep_times_move_too(anonymiser: Anonymiser) -> None:
+    start, end = 1_794_200_000_000, 1_794_227_000_000
+    result = anonymiser.anonymise(
+        {"sleepStartTimestampGMT": start, "sleepEndTimestampGMT": end}
+    )
+
+    moved_start = number(result, "sleepStartTimestampGMT") - start - SHIFT * DAY_MS
+    moved_end = number(result, "sleepEndTimestampGMT") - end - SHIFT * DAY_MS
+    assert moved_start == moved_end
+    assert 60 * 60_000 <= abs(moved_start) <= 240 * 60_000
+
+
+def test_each_activity_gets_its_own_time_offset(anonymiser: Anonymiser) -> None:
+    activities = [
+        {"startTimeLocal": "2026-11-10 18:30:00", "endTimeGMT": "2026-11-10 18:15:00"},
+        {"startTimeLocal": "2026-11-09 18:30:00", "endTimeGMT": "2026-11-09 18:15:00"},
+    ]
+
+    result = anonymiser.anonymise([dict(a) for a in activities])
+
+    assert isinstance(result, list)
+    moves = []
+    for before, after in zip(activities, result, strict=True):
+        assert isinstance(after, dict)
+        start = _moved_minutes(before["startTimeLocal"], str(after["startTimeLocal"]))
+        end = _moved_minutes(before["endTimeGMT"], str(after["endTimeGMT"]))
+        assert start == end
+        moves.append(start)
+    # A habit (same time every day) must not survive as a constant offset.
+    assert moves[0] != moves[1]
+
+
+def test_day_boundaries_only_move_by_whole_weeks(anonymiser: Anonymiser) -> None:
+    result = anonymiser.anonymise(
+        {
+            "calendarDate": "2026-11-10",
+            "startTimestampLocal": "2026-11-10T00:00:00.0",
+            "wellnessEndTimeLocal": "2026-11-10T23:59:59.0",
+            "sleepStartTimestampLocal": "2026-11-09T23:10:00.0",
+        }
+    )
+
+    assert isinstance(result, dict)
+    assert result["calendarDate"] == "2026-12-08"
+    assert result["startTimestampLocal"] == "2026-12-08T00:00:00.0"
+    assert result["wellnessEndTimeLocal"] == "2026-12-08T23:59:59.0"
