@@ -4,7 +4,7 @@ import json
 from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, PropertyMock, patch
 
 import pytest
 from homeassistant.const import CONF_API_KEY
@@ -45,6 +45,20 @@ def mock_client() -> Iterator[MagicMock]:
     ):
         client.factory = flow_factory
         yield client
+
+
+@pytest.fixture
+def entity_registry_enabled_by_default() -> Iterator[None]:
+    """Create every entity enabled, even those disabled by default.
+
+    Home Assistant core has this fixture, but its test plugin does not.
+    """
+    with patch(
+        "homeassistant.helpers.entity.Entity.entity_registry_enabled_default",
+        new_callable=PropertyMock,
+        return_value=True,
+    ):
+        yield
 
 
 @pytest.fixture

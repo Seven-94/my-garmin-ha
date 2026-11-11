@@ -15,6 +15,17 @@ from scripts.anonymise import (
 )
 
 SHIFT = 28
+# The stress enum of the API spec.
+STRESS_LABELS = (
+    "CALM",
+    "BALANCED",
+    "STRESSFUL",
+    "VERY_STRESSFUL",
+    "CALM_AWAKE",
+    "BALANCED_AWAKE",
+    "STRESSFUL_AWAKE",
+    "VERY_STRESSFUL_AWAKE",
+)
 DAY_MS = 86_400_000
 
 
@@ -427,11 +438,23 @@ def test_health_labels_come_from_the_same_vocabulary(anonymiser: Anonymiser) -> 
     assert isinstance(result, list)
     stress = {item["stressQualifier"] for item in result if isinstance(item, dict)}
     lower = {item["qualifier"] for item in result if isinstance(item, dict)}
-    assert stress <= {"CALM", "BALANCED", "STRESSFUL", "VERY_STRESSFUL"}
-    assert lower <= {"calm", "balanced", "stressful", "very_stressful"}
+    assert stress <= set(STRESS_LABELS)
+    assert lower <= {label.lower() for label in STRESS_LABELS}
     # Drawn at random, not copied: several values over 20 draws.
     assert len(stress) > 1
     assert len(lower) > 1
+
+
+def test_awake_stress_labels_are_drawn_too(anonymiser: Anonymiser) -> None:
+    # The spec's stress enum has an "_AWAKE" variant of every category.
+    result = anonymiser.anonymise(
+        [{"stressQualifier": "CALM_AWAKE"} for _ in range(40)]
+    )
+
+    assert isinstance(result, list)
+    stress = {item["stressQualifier"] for item in result if isinstance(item, dict)}
+    assert stress <= set(STRESS_LABELS)
+    assert len(stress) > 1
 
 
 def test_sleep_labels_and_unknown_feedback_are_replaced(

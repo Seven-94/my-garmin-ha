@@ -16,7 +16,7 @@ from .coordinator import (
 
 __all__ = ["DOMAIN", "MyGarminConfigEntry", "async_setup_entry", "async_unload_entry"]
 
-PLATFORMS = [Platform.SENSOR]
+PLATFORMS = [Platform.BINARY_SENSOR, Platform.SENSOR]
 
 type MyGarminConfigEntry = ConfigEntry[MyGarminData]
 
