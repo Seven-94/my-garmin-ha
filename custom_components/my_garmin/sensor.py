@@ -1,4 +1,4 @@
-"""Sensors: the daily summary, last night's sleep and heart rate variability."""
+"""Sensors: the daily summary, last night's sleep and HRV, and weight."""
 
 import logging
 from collections.abc import Callable
@@ -16,6 +16,7 @@ from homeassistant.const import (
     PERCENTAGE,
     EntityCategory,
     UnitOfLength,
+    UnitOfMass,
     UnitOfTime,
     UnitOfVolume,
 )
@@ -765,6 +766,142 @@ HRV_SENSORS: tuple[MyGarminSensorDescription, ...] = (
 )
 
 
+def _weigh_in(data: JsonObject) -> dict[str, Any]:
+    return _nested(data, "weigh_in")
+
+
+def _to_grams(weigh_in: JsonObject) -> int:
+    """Factor turning this weigh-in's masses into grams.
+
+    The spec says kilograms but Garmin sends grams. Nobody weighs a tonne, nor
+    less than a kilogram: the weight itself tells the unit.
+    """
+    weight = weigh_in.get("weight")
+    if isinstance(weight, int | float) and 0 < weight < 1000:
+        return 1000
+    return 1
+
+
+def _weighed(field: str, *, signed: bool = False) -> Callable[[JsonObject], Number]:
+    """A mass of the latest weigh-in, in grams; a change can be 0 or negative."""
+    read = _measure(field, zero_is_missing=not signed, signed=signed)
+
+    def value(data: JsonObject) -> Number:
+        weigh_in = _weigh_in(data)
+        mass = read(weigh_in)
+        return None if mass is None else mass * _to_grams(weigh_in)
+
+    return value
+
+
+def _weigh_in_attributes(data: JsonObject) -> dict[str, Any]:
+    weigh_in = _weigh_in(data)
+    measured_at = _utc(weigh_in.get("timestampGMT"))
+    return {
+        "measured_at": measured_at.isoformat() if measured_at else None,
+        "source": _code(weigh_in.get("sourceType")),
+    }
+
+
+def _latest(collection: str) -> Callable[[JsonObject], dict[str, Any]]:
+    """The goal (or goal range) in effect: Garmin lists the latest last."""
+
+    def read(data: JsonObject) -> dict[str, Any]:
+        items = _nested(data, "goal").get(collection)
+        if not isinstance(items, list):
+            return {}
+        return next((i for i in reversed(items) if isinstance(i, dict)), {})
+
+    return read
+
+
+_weight_goal = _latest("userGoals")
+_weight_goal_range = _latest("userGoalRanges")
+
+
+def _goal_grams(
+    item: Callable[[JsonObject], dict[str, Any]], field: str
+) -> Callable[[JsonObject], Number]:
+    # Goals are always in grams (userGoalType WEIGHT_GRAMS).
+    read = _measure(field, zero_is_missing=True)
+    return lambda data: read(item(data))
+
+
+def _goal_attributes(data: JsonObject) -> dict[str, Any]:
+    goal = _weight_goal(data)
+    return {
+        "category": _code(goal.get("userGoalCategory")),
+        "tracking_period": _code(goal.get("trackingPeriodType")),
+    }
+
+
+def _mass(
+    key: str,
+    value_fn: Callable[[JsonObject], StateValue],
+    attributes_fn: Callable[[JsonObject], dict[str, Any]] | None,
+    *,
+    state_class: SensorStateClass | None = SensorStateClass.MEASUREMENT,
+    enabled: bool = True,
+) -> MyGarminSensorDescription:
+    """A mass in grams, shown in kilograms (or the user's own unit)."""
+    return MyGarminSensorDescription(
+        key=key,
+        translation_key=key,
+        native_unit_of_measurement=UnitOfMass.GRAMS,
+        suggested_unit_of_measurement=UnitOfMass.KILOGRAMS,
+        suggested_display_precision=1,
+        device_class=SensorDeviceClass.WEIGHT,
+        state_class=state_class,
+        entity_registry_enabled_default=enabled,
+        value_fn=value_fn,
+        attributes_fn=attributes_fn,
+    )
+
+
+def _body(description: MyGarminSensorDescription) -> MyGarminSensorDescription:
+    """A body composition reading of the latest weigh-in."""
+    read = description.value_fn
+    return replace(
+        description,
+        value_fn=lambda data: read(_weigh_in(data)),
+        attributes_fn=_weigh_in_attributes,
+    )
+
+
+WEIGHT_SENSORS: tuple[MyGarminSensorDescription, ...] = (
+    _mass("weight", _weighed("weight"), _weigh_in_attributes),
+    _mass("weight_change", _weighed("weightDelta", signed=True), _weigh_in_attributes),
+    _mass("muscle_mass", _weighed("muscleMass"), _weigh_in_attributes),
+    _mass("bone_mass", _weighed("boneMass"), _weigh_in_attributes, enabled=False),
+    _body(_reading("bmi", "bmi", precision=1)),
+    _body(_reading("body_fat", "bodyFat", PERCENTAGE, precision=1)),
+    _body(_reading("body_water", "bodyWater", PERCENTAGE, precision=1)),
+    _body(_reading("visceral_fat", "visceralFat", enabled=False)),
+    _body(_reading("metabolic_age", "metabolicAge", UnitOfTime.YEARS, enabled=False)),
+    _body(_reading("physique_rating", "physiqueRating", enabled=False)),
+    _mass(
+        "weight_goal",
+        _goal_grams(_weight_goal, "goalValue"),
+        _goal_attributes,
+        state_class=None,
+    ),
+    _mass(
+        "weight_goal_low",
+        _goal_grams(_weight_goal_range, "lowWeightGoalInGrams"),
+        None,
+        state_class=None,
+        enabled=False,
+    ),
+    _mass(
+        "weight_goal_high",
+        _goal_grams(_weight_goal_range, "highWeightGoalInGrams"),
+        None,
+        state_class=None,
+        enabled=False,
+    ),
+)
+
+
 async def async_setup_entry(
     hass: HomeAssistant,
     entry: MyGarminConfigEntry,
@@ -777,6 +914,10 @@ async def async_setup_entry(
             *(MyGarminSensor(data.daily, description) for description in SENSORS),
             *(MyGarminSensor(data.sleep, description) for description in SLEEP_SENSORS),
             *(MyGarminSensor(data.hrv, description) for description in HRV_SENSORS),
+            *(
+                MyGarminSensor(data.weight, description)
+                for description in WEIGHT_SENSORS
+            ),
         ]
     )
 

@@ -459,6 +459,45 @@
           "unbalanced": "Unbalanced",
           "balanced": "Balanced"
         }
+      },
+      "weight": {
+        "name": "Weight"
+      },
+      "weight_change": {
+        "name": "Weight change"
+      },
+      "muscle_mass": {
+        "name": "Muscle mass"
+      },
+      "bone_mass": {
+        "name": "Bone mass"
+      },
+      "bmi": {
+        "name": "BMI"
+      },
+      "body_fat": {
+        "name": "Body fat"
+      },
+      "body_water": {
+        "name": "Body water"
+      },
+      "visceral_fat": {
+        "name": "Visceral fat"
+      },
+      "metabolic_age": {
+        "name": "Metabolic age"
+      },
+      "physique_rating": {
+        "name": "Physique rating"
+      },
+      "weight_goal": {
+        "name": "Weight goal"
+      },
+      "weight_goal_low": {
+        "name": "Weight goal range low"
+      },
+      "weight_goal_high": {
+        "name": "Weight goal range high"
       }
     }
   }

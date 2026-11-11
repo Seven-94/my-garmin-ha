@@ -74,6 +74,23 @@ class GarminPersonalClient:
             f"/hrv-service/hrv/{day.isoformat()}", null_is_empty=True
         )
 
+    async def get_weight_range(self, start: date, end: date) -> JsonObject:
+        """Weigh-ins between two days, and the last one before them."""
+        # weight/all answers HTTP 400: weight/range is the working endpoint.
+        return await self._get_object(
+            f"/weight-service/weight/range/{start.isoformat()}/{end.isoformat()}",
+            {"includeAll": "true"},
+            null_is_empty=True,
+        )
+
+    async def get_weight_goal(self, start: date, end: date) -> JsonObject:
+        """Weight goals in effect between two days, in grams."""
+        return await self._get_object(
+            "/goal-service/goal/user/effective/weightgoal/"
+            f"{start.isoformat()}/{end.isoformat()}",
+            null_is_empty=True,
+        )
+
     async def _get_object(
         self,
         path: str,

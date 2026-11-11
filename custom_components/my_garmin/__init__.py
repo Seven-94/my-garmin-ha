@@ -13,6 +13,7 @@ from .coordinator import (
     MyGarminData,
     SleepCoordinator,
     SyncWatcher,
+    WeightCoordinator,
 )
 
 __all__ = ["DOMAIN", "MyGarminConfigEntry", "async_setup_entry", "async_unload_entry"]
@@ -33,16 +34,20 @@ async def async_setup_entry(hass: HomeAssistant, entry: MyGarminConfigEntry) -> 
     )
     daily = DailySummaryCoordinator(hass, entry, client)
     await daily.async_config_entry_first_refresh()
-    # Sleep and HRV must not hold the set-up back: their sensors stay
+    # Sleep, HRV and weight must not hold the set-up back: their sensors stay
     # unavailable until a later refresh succeeds.
     sleep = SleepCoordinator(hass, entry, client)
     await sleep.async_refresh()
     hrv = HrvCoordinator(hass, entry, client)
     await hrv.async_refresh()
+    weight = WeightCoordinator(hass, entry, client)
+    await weight.async_refresh()
 
-    entry.runtime_data = MyGarminData(client=client, daily=daily, sleep=sleep, hrv=hrv)
+    entry.runtime_data = MyGarminData(
+        client=client, daily=daily, sleep=sleep, hrv=hrv, weight=weight
+    )
     entry.async_on_unload(
-        daily.async_add_listener(SyncWatcher(hass, daily, [sleep, hrv]))
+        daily.async_add_listener(SyncWatcher(hass, daily, [sleep, hrv, weight]))
     )
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
