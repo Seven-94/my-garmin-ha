@@ -8,6 +8,7 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from .api import GarminPersonalClient
 from .const import DOMAIN
 from .coordinator import (
+    ActivitiesCoordinator,
     DailySummaryCoordinator,
     HrvCoordinator,
     MyGarminData,
@@ -18,7 +19,7 @@ from .coordinator import (
 
 __all__ = ["DOMAIN", "MyGarminConfigEntry", "async_setup_entry", "async_unload_entry"]
 
-PLATFORMS = [Platform.BINARY_SENSOR, Platform.SENSOR]
+PLATFORMS = [Platform.BINARY_SENSOR, Platform.EVENT, Platform.SENSOR]
 
 type MyGarminConfigEntry = ConfigEntry[MyGarminData]
 
@@ -34,21 +35,27 @@ async def async_setup_entry(hass: HomeAssistant, entry: MyGarminConfigEntry) -> 
     )
     daily = DailySummaryCoordinator(hass, entry, client)
     await daily.async_config_entry_first_refresh()
-    # Sleep, HRV and weight must not hold the set-up back: their sensors stay
-    # unavailable until a later refresh succeeds.
+    # Sleep, HRV, weight and activities must not hold the set-up back: their
+    # sensors stay unavailable until a later refresh succeeds.
     sleep = SleepCoordinator(hass, entry, client)
     await sleep.async_refresh()
     hrv = HrvCoordinator(hass, entry, client)
     await hrv.async_refresh()
     weight = WeightCoordinator(hass, entry, client)
     await weight.async_refresh()
+    activities = ActivitiesCoordinator(hass, entry, client)
+    await activities.async_refresh()
 
     entry.runtime_data = MyGarminData(
-        client=client, daily=daily, sleep=sleep, hrv=hrv, weight=weight
+        client=client,
+        daily=daily,
+        sleep=sleep,
+        hrv=hrv,
+        weight=weight,
+        activities=activities,
     )
-    entry.async_on_unload(
-        daily.async_add_listener(SyncWatcher(hass, daily, [sleep, hrv, weight]))
-    )
+    watcher = SyncWatcher(hass, daily, [sleep, hrv, weight, activities])
+    entry.async_on_unload(daily.async_add_listener(watcher))
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
 

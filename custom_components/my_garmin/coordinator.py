@@ -35,6 +35,10 @@ NIGHT_INTERVAL = timedelta(hours=2)
 WEIGHT_INTERVAL = timedelta(hours=1)
 # The range response also carries the last weigh-in before it: a week is enough.
 WEIGHT_DAYS = 7
+# Activities logged in the app, or imported, arrive without a watch sync.
+ACTIVITY_INTERVAL = timedelta(hours=1)
+# Enough to catch every activity recorded between two refreshes.
+ACTIVITY_LIMIT = 10
 # Garmin publishes no quota and may throttle without notice: after a 429, stay
 # away for at least this long, or longer if Garmin says so.
 RATE_LIMIT_BACKOFF = 30 * 60.0
@@ -230,6 +234,35 @@ class WeightCoordinator(MyGarminCoordinator):
         return {"weigh_in": weigh_in, "goal": goal}
 
 
+def activity_start(activity: JsonObject) -> str:
+    """Sort key: Garmin's GMT start time, "YYYY-MM-DD HH:MM:SS"."""
+    return str(activity.get("startTimeGMT") or "")
+
+
+class ActivitiesCoordinator(MyGarminCoordinator):
+    """The latest activities, newest first, refreshed every hour."""
+
+    def __init__(
+        self,
+        hass: HomeAssistant,
+        entry: ConfigEntry[MyGarminData],
+        client: GarminPersonalClient,
+    ) -> None:
+        super().__init__(
+            hass,
+            entry,
+            client,
+            name="activities",
+            update_interval=ACTIVITY_INTERVAL,
+            fetch=self._async_fetch_activities,
+        )
+
+    async def _async_fetch_activities(self, day: date) -> JsonObject:
+        del day  # the latest activities, whatever their day
+        activities = await self.client.get_activities(ACTIVITY_LIMIT)
+        return {"activities": sorted(activities, key=activity_start, reverse=True)}
+
+
 def _last_sync(coordinator: DailySummaryCoordinator) -> object:
     return (coordinator.data or {}).get("lastSyncTimestampGMT")
 
@@ -267,3 +300,4 @@ class MyGarminData:
     sleep: SleepCoordinator
     hrv: HrvCoordinator
     weight: WeightCoordinator
+    activities: ActivitiesCoordinator

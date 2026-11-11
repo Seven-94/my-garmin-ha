@@ -498,6 +498,21 @@
       },
       "weight_goal_high": {
         "name": "Weight goal range high"
+      },
+      "last_activity": {
+        "name": "Last activity"
+      }
+    },
+    "event": {
+      "new_activity": {
+        "name": "New activity",
+        "state_attributes": {
+          "event_type": {
+            "state": {
+              "new_activity": "New activity"
+            }
+          }
+        }
       }
     }
   }

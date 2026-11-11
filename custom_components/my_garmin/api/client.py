@@ -91,6 +91,20 @@ class GarminPersonalClient:
             null_is_empty=True,
         )
 
+    async def get_activities(self, limit: int) -> list[JsonObject]:
+        """The most recent activities, newest first."""
+        path = "/activitylist-service/activities/search/activities"
+        payload = await self.get(path, {"start": "0", "limit": str(limit)})
+        if payload is None:
+            return []
+        if not isinstance(payload, list) or not all(
+            isinstance(item, dict) for item in payload
+        ):
+            raise GarminApiError(
+                HTTPStatus.OK, f"Expected a list of objects from {path}"
+            )
+        return payload
+
     async def _get_object(
         self,
         path: str,

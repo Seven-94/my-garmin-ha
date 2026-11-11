@@ -37,6 +37,7 @@ def mock_client() -> Iterator[MagicMock]:
     client.get_hrv = AsyncMock(return_value={})
     client.get_weight_range = AsyncMock(return_value={})
     client.get_weight_goal = AsyncMock(return_value={})
+    client.get_activities = AsyncMock(return_value=[])
     with (
         patch(
             "custom_components.my_garmin.config_flow.GarminPersonalClient",
