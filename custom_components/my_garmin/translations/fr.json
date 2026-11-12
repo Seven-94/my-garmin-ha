@@ -591,6 +591,39 @@
       },
       "hydration_activity_intake": {
         "name": "Hydratation pendant les activités"
+      },
+      "nutrition_carbs": {
+        "name": "Glucides consommés"
+      },
+      "nutrition_protein": {
+        "name": "Protéines consommées"
+      },
+      "nutrition_fat": {
+        "name": "Lipides consommés"
+      },
+      "nutrition_calorie_goal": {
+        "name": "Objectif d'apport calorique"
+      },
+      "nutrition_carbs_goal": {
+        "name": "Objectif de glucides"
+      },
+      "nutrition_protein_goal": {
+        "name": "Objectif de protéines"
+      },
+      "nutrition_fat_goal": {
+        "name": "Objectif de lipides"
+      },
+      "nutrition_adjusted_calorie_goal": {
+        "name": "Objectif d'apport calorique ajusté"
+      },
+      "nutrition_adjusted_carbs_goal": {
+        "name": "Objectif de glucides ajusté"
+      },
+      "nutrition_adjusted_protein_goal": {
+        "name": "Objectif de protéines ajusté"
+      },
+      "nutrition_adjusted_fat_goal": {
+        "name": "Objectif de lipides ajusté"
       }
     },
     "event": {

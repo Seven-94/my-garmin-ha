@@ -167,6 +167,17 @@ class GarminPersonalClient:
             )
         return payload
 
+    async def get_nutrition(self, day: date) -> JsonObject:
+        """The food log of the day: consumed nutrients, goals, meals and foods.
+
+        Empty when Garmin answers a null body. Food pictures are not requested.
+        """
+        return await self._get_object(
+            f"/nutrition-service/food/logs/{day.isoformat()}",
+            {"includeMedia": "false"},
+            null_is_empty=True,
+        )
+
     async def get_hydration(self, start: date, end: date) -> list[JsonObject]:
         """Daily hydration between two days (31 at most), in millilitres."""
         path = (

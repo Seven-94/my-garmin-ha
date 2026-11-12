@@ -12,6 +12,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Hydration sensors, disabled by default: sweat loss and fluid intake during
   activities, refreshed every hour and after each watch sync, with the time of
   the last entry as an attribute. Intake and goal stay on the daily summary.
+- Nutrition sensors, disabled by default: carbohydrates, protein and fat
+  consumed today, and the calorie and macronutrient goals (base and adjusted
+  to the day's activity). Meals, foods and their names are dropped on receipt:
+  never in a state, an attribute, a log or the diagnostics. Calories consumed
+  stay on the daily summary.
 
 ### Fixed
 

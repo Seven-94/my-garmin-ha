@@ -1,0 +1,97 @@
+{
+  "mealDate": "2026-11-08",
+  "dayStartTime": "00:00:00",
+  "dayEndTime": "23:59:59",
+  "dailyNutritionContent": {
+    "calories": 1650,
+    "caloriesPercentage": 66.0,
+    "carbs": 190.5,
+    "protein": 85.25,
+    "fat": 55.75
+  },
+  "dailyNutritionGoals": {
+    "calories": 2500,
+    "carbs": 300.0,
+    "protein": 120.0,
+    "fat": 80.0,
+    "adjustedCalories": 2900,
+    "adjustedCarbs": 350.0,
+    "adjustedProtein": 135.0,
+    "adjustedFat": 92.5
+  },
+  "mealDetails": [
+    {
+      "meal": {
+        "mealId": 2,
+        "mealName": "Synthetic meal name",
+        "defaultMealName": "Breakfast",
+        "displayOrder": 1,
+        "mealIndex": 0,
+        "translated": false,
+        "startTime": "06:00:00",
+        "endTime": "10:00:00"
+      },
+      "mealNutritionContent": {
+        "calories": 450,
+        "carbs": 60.0,
+        "protein": 20.0,
+        "fat": 12.0
+      },
+      "loggedFoods": [
+        {
+          "logId": "synthetic-log-id",
+          "mealId": 2,
+          "mealTime": "08:00:00",
+          "servingQty": 1.0,
+          "foodMetaData": {
+            "foodId": "synthetic-food-id",
+            "foodName": "Synthetic food name",
+            "brandName": "Synthetic brand",
+            "foodImageUrl": "https://example.invalid/synthetic-food.jpg",
+            "imageUuid": "00000000-0000-0000-0000-000000000000",
+            "foodType": "GENERIC",
+            "source": "SYNTHETIC"
+          },
+          "foodImages": [
+            {
+              "imageType": "THUMBNAIL",
+              "imageUrl": "https://example.invalid/synthetic-food-thumb.jpg"
+            }
+          ],
+          "nutritionContent": {
+            "calories": 450,
+            "carbs": 60.0,
+            "protein": 20.0,
+            "fat": 12.0
+          }
+        }
+      ]
+    }
+  ],
+  "loggedFoodsWithServingSizes": [
+    {
+      "foodMetaData": {
+        "foodId": "synthetic-food-id",
+        "foodName": "Synthetic food name",
+        "brandName": "Synthetic brand",
+        "foodImageUrl": "https://example.invalid/synthetic-food.jpg",
+        "imageUuid": "00000000-0000-0000-0000-000000000000",
+        "foodType": "GENERIC",
+        "source": "SYNTHETIC"
+      },
+      "foodImages": [
+        {
+          "imageType": "THUMBNAIL",
+          "imageUrl": "https://example.invalid/synthetic-food-thumb.jpg"
+        }
+      ],
+      "isFavorite": false,
+      "nutritionContents": [
+        {
+          "calories": 450,
+          "servingUnit": "SYNTHETIC_UNIT"
+        }
+      ]
+    }
+  ]
+}

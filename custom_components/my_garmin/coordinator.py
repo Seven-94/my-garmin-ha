@@ -382,6 +382,37 @@ class HydrationCoordinator(MyGarminCoordinator):
         )
 
 
+# Meals are logged in the app, without a watch sync; the adjusted goals follow
+# the day's activity, which a watch sync brings.
+NUTRITION_INTERVAL = timedelta(hours=1)
+# The day's totals and goals: meals, foods, their names and pictures say too much
+# about a person and are dropped as soon as they arrive.
+NUTRITION_SECTIONS = ("dailyNutritionContent", "dailyNutritionGoals")
+
+
+class NutritionCoordinator(MyGarminCoordinator):
+    """Today's nutrient totals and goals, every hour and after each watch sync."""
+
+    def __init__(
+        self,
+        hass: HomeAssistant,
+        entry: ConfigEntry[MyGarminData],
+        client: GarminPersonalClient,
+    ) -> None:
+        super().__init__(
+            hass,
+            entry,
+            client,
+            name="nutrition",
+            update_interval=NUTRITION_INTERVAL,
+            fetch=self._async_fetch_nutrition,
+        )
+
+    async def _async_fetch_nutrition(self, day: date) -> JsonObject:
+        log = await self.client.get_nutrition(day)
+        return {section: log.get(section) for section in NUTRITION_SECTIONS}
+
+
 def _last_sync(coordinator: DailySummaryCoordinator) -> object:
     return (coordinator.data or {}).get("lastSyncTimestampGMT")
 
@@ -449,3 +480,4 @@ class MyGarminData:
     spo2: SpO2Coordinator
     heart_rate_thresholds: HeartRateThresholdsCoordinator
     hydration: HydrationCoordinator
+    nutrition: NutritionCoordinator

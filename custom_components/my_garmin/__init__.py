@@ -16,6 +16,7 @@ from .coordinator import (
     HrvCoordinator,
     HydrationCoordinator,
     MyGarminData,
+    NutritionCoordinator,
     SleepCoordinator,
     SpO2Coordinator,
     SyncWatcher,
@@ -70,6 +71,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: MyGarminConfigEntry) -> 
     await heart_rate_thresholds.async_refresh()
     hydration = HydrationCoordinator(hass, entry, client)
     await hydration.async_refresh()
+    nutrition = NutritionCoordinator(hass, entry, client)
+    await nutrition.async_refresh()
 
     entry.runtime_data = MyGarminData(
         client=client,
@@ -83,10 +86,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: MyGarminConfigEntry) -> 
         spo2=spo2,
         heart_rate_thresholds=heart_rate_thresholds,
         hydration=hydration,
+        nutrition=nutrition,
     )
-    watcher = SyncWatcher(
-        hass, daily, [sleep, hrv, weight, activities, fitness_age, spo2, hydration]
-    )
+    dependents = [sleep, hrv, weight, activities, fitness_age, spo2, hydration]
+    watcher = SyncWatcher(hass, daily, [*dependents, nutrition])
     entry.async_on_unload(daily.async_add_listener(watcher))
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
