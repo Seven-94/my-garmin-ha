@@ -25,6 +25,10 @@ ZIP_NAME = "my_garmin.zip"
 NOTES_NAME = "release-notes.md"
 # Fixed: the same sources give the same bytes, whatever the checkout time.
 _ZIP_DATE = (2026, 1, 1, 0, 0, 0)
+# Stored, not deflated: deflate output depends on the zlib build (zlib on the
+# CI runner, zlib-ng in uv's Python), so anyone can rebuild the release zip and
+# compare it byte for byte. The component is small: size does not matter.
+_ZIP_METHOD = zipfile.ZIP_STORED
 _SKIPPED_PARTS = {"__pycache__"}
 _SKIPPED_SUFFIXES = {".pyc", ".pyo"}
 
@@ -80,12 +84,12 @@ def _component_files(component: Path) -> list[Path]:
 def build_zip(component: Path, archive: Path) -> None:
     """Zip the component's files at the archive root, as HACS extracts them."""
     archive.parent.mkdir(parents=True, exist_ok=True)
-    with zipfile.ZipFile(archive, "w", zipfile.ZIP_DEFLATED) as zipped:
+    with zipfile.ZipFile(archive, "w", _ZIP_METHOD) as zipped:
         for path in _component_files(component):
             info = zipfile.ZipInfo(
                 path.relative_to(component).as_posix(), date_time=_ZIP_DATE
             )
-            info.compress_type = zipfile.ZIP_DEFLATED
+            info.compress_type = _ZIP_METHOD
             info.external_attr = 0o644 << 16
             zipped.writestr(info, path.read_bytes())
 

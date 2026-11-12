@@ -117,6 +117,20 @@ def test_zip_is_reproducible(tmp_path: Path) -> None:
     assert (tmp_path / "a.zip").read_bytes() == (tmp_path / "b.zip").read_bytes()
 
 
+def test_zip_stores_files_uncompressed(tmp_path: Path) -> None:
+    # Deflate output depends on the zlib build (zlib or zlib-ng): stored
+    # entries give the same bytes on the CI runner and on any machine.
+    component = _component(tmp_path)
+    archive = tmp_path / "my_garmin.zip"
+
+    build_zip(component, archive)
+
+    with zipfile.ZipFile(archive) as zipped:
+        for info in zipped.infolist():
+            assert info.compress_type == zipfile.ZIP_STORED, info.filename
+            assert info.compress_size == info.file_size, info.filename
+
+
 def test_main_writes_the_zip_and_the_notes(tmp_path: Path) -> None:
     _component(tmp_path)
     (tmp_path / "CHANGELOG.md").write_text(CHANGELOG, encoding="utf-8")

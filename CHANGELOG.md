@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- The release zip stores its files uncompressed, so a local build of a tag
+  gives the same bytes as the published `my_garmin.zip`.
+
 ## [0.1.0] - 2026-11-12
 
 ### Added
