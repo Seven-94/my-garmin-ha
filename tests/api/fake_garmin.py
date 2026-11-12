@@ -33,6 +33,8 @@ class Reply:
 
     status: int = 200
     body: str = "{}"
+    # Raw bytes, such as a file download; replaces body when set.
+    content: bytes | None = None
     headers: dict[str, str] = field(default_factory=dict)
     # Seconds to wait before answering, to order concurrent responses.
     delay: float = 0.0
@@ -119,4 +121,8 @@ class FakeGarmin:
 
 
 def _respond(reply: Reply) -> web.Response:
+    if reply.content is not None:
+        return web.Response(
+            status=reply.status, body=reply.content, headers=reply.headers
+        )
     return web.Response(status=reply.status, text=reply.body, headers=reply.headers)

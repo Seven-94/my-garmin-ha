@@ -730,6 +730,34 @@
           "description": "How many complete days to import, up to yesterday (at most 1095)."
         }
       }
+    },
+    "download_activity_file": {
+      "name": "Download activity file",
+      "description": "Saves the original file of an activity, as recorded by the device (a ZIP holding the FIT file), to the my_garmin folder of the local media folder.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Garmin account",
+          "description": "The account to use. Optional when there is only one."
+        },
+        "activity_id": {
+          "name": "Activity ID",
+          "description": "The Garmin Connect activity number, as in the activity's web address (it is also an attribute of the latest activity sensor)."
+        }
+      }
+    },
+    "get_activity_workouts": {
+      "name": "Get activity workouts",
+      "description": "Returns the workouts performed during an activity, as response data.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Garmin account",
+          "description": "The account to use. Optional when there is only one."
+        },
+        "activity_id": {
+          "name": "Activity ID",
+          "description": "The Garmin Connect activity number, as in the activity's web address (it is also an attribute of the latest activity sensor)."
+        }
+      }
     }
   },
   "exceptions": {
@@ -744,6 +772,27 @@
     },
     "rate_limited": {
       "message": "Garmin asked to slow down. {days} days were imported; run the backfill again later for the rest."
+    },
+    "activity_not_found": {
+      "message": "Garmin has no activity with this ID for this account."
+    },
+    "garmin_error": {
+      "message": "Garmin answered with an error. Try again later."
+    },
+    "rate_limited_retry": {
+      "message": "Garmin asked to slow down. Try again later."
+    },
+    "cannot_connect": {
+      "message": "Garmin Connect could not be reached."
+    },
+    "auth_failed": {
+      "message": "Garmin rejected the API key. Re-authenticate the integration."
+    },
+    "media_unavailable": {
+      "message": "The local media folder is not set up or not allowed: the file cannot be saved."
+    },
+    "unexpected_file": {
+      "message": "Garmin did not send a ZIP or FIT file: nothing was saved."
     }
   }
 }

@@ -17,6 +17,7 @@ from custom_components.my_garmin.api import (
     GarminPersonalClient,
     GarminRateLimitError,
 )
+from custom_components.my_garmin.api import client as client_module
 from tests.api.fake_garmin import FAKE_API_KEY, FakeClock, FakeGarmin, Reply
 
 PROFILE_PATH = "/userprofile-service/userprofile/settings"
@@ -674,3 +675,79 @@ async def test_get_sleep_summaries_rejects_anything_but_a_list_of_objects(
 
     with pytest.raises(GarminApiError):
         await client.get_sleep_summaries(date(2026, 10, 1), date(2026, 10, 31))
+
+
+ACTIVITY_FILE_PATH = "/download-service/files/activity/123"
+WORKOUTS_PATH = "/activity-service/activity/123/workouts"
+
+
+async def test_get_activity_file_returns_the_raw_bytes(
+    client: GarminPersonalClient, fake_garmin: FakeGarmin
+) -> None:
+    content = b"PK\x03\x04synthetic zip bytes"
+    fake_garmin.data_replies[ACTIVITY_FILE_PATH] = [Reply(content=content)]
+
+    assert await client.get_activity_file(123) == content
+
+
+async def test_get_activity_file_retries_once_after_a_rejected_token(
+    client: GarminPersonalClient, fake_garmin: FakeGarmin
+) -> None:
+    content = b"PK\x03\x04synthetic"
+    fake_garmin.data_replies[ACTIVITY_FILE_PATH] = [
+        Reply(status=401),
+        Reply(content=content),
+    ]
+
+    assert await client.get_activity_file(123) == content
+    assert fake_garmin.exchanges == 2
+
+
+async def test_get_activity_file_refuses_a_file_too_large(
+    client: GarminPersonalClient,
+    fake_garmin: FakeGarmin,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(client_module, "MAX_FILE_BYTES", 8)
+    fake_garmin.data_replies[ACTIVITY_FILE_PATH] = [Reply(content=b"PK" + b"x" * 20)]
+
+    with pytest.raises(GarminApiError, match="larger"):
+        await client.get_activity_file(123)
+
+
+async def test_get_activity_file_maps_a_missing_activity(
+    client: GarminPersonalClient, fake_garmin: FakeGarmin
+) -> None:
+    fake_garmin.data_replies[ACTIVITY_FILE_PATH] = [Reply(status=404)]
+
+    with pytest.raises(GarminApiError) as err:
+        await client.get_activity_file(123)
+
+    assert err.value.status == 404
+
+
+async def test_get_activity_workouts_returns_the_list(
+    client: GarminPersonalClient, fake_garmin: FakeGarmin
+) -> None:
+    fake_garmin.data_replies[WORKOUTS_PATH] = [Reply(body='[{"workoutId": 1}]')]
+
+    assert await client.get_activity_workouts(123) == [{"workoutId": 1}]
+
+
+@pytest.mark.parametrize("body", ["null", ""])
+async def test_get_activity_workouts_without_data_returns_an_empty_list(
+    client: GarminPersonalClient, fake_garmin: FakeGarmin, body: str
+) -> None:
+    fake_garmin.data_replies[WORKOUTS_PATH] = [Reply(body=body)]
+
+    assert await client.get_activity_workouts(123) == []
+
+
+@pytest.mark.parametrize("body", ['{"workoutId": 1}', "[1, 2]"])
+async def test_get_activity_workouts_rejects_anything_but_a_list_of_objects(
+    client: GarminPersonalClient, fake_garmin: FakeGarmin, body: str
+) -> None:
+    fake_garmin.data_replies[WORKOUTS_PATH] = [Reply(body=body)]
+
+    with pytest.raises(GarminApiError):
+        await client.get_activity_workouts(123)

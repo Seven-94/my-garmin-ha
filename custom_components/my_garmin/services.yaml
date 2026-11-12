@@ -12,3 +12,27 @@ backfill_statistics:
           max: 1095
           unit_of_measurement: d
           mode: box
+
+download_activity_file:
+  fields:
+    config_entry_id:
+      selector:
+        config_entry:
+          integration: my_garmin
+    activity_id:
+      required: true
+      example: 12345678901
+      selector:
+        text:
+
+get_activity_workouts:
+  fields:
+    config_entry_id:
+      selector:
+        config_entry:
+          integration: my_garmin
+    activity_id:
+      required: true
+      example: 12345678901
+      selector:
+        text:
