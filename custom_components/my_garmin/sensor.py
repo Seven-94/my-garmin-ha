@@ -1185,6 +1185,27 @@ ALTITUDE_SENSORS: tuple[MyGarminSensorDescription, ...] = (
 )
 
 
+def _threshold(key: str, field: str) -> MyGarminSensorDescription:
+    """An abnormal heart rate alert threshold, in bpm: a setting, not a measurement."""
+    return MyGarminSensorDescription(
+        key=key,
+        translation_key=key,
+        native_unit_of_measurement=UNIT_BPM,
+        state_class=None,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        # 0 or null: the alert is off, or Garmin has no value.
+        value_fn=_measure(field, zero_is_missing=True),
+    )
+
+
+# The same response carries the day's resting, lowest and highest heart rates:
+# the daily summary sensors already show them.
+HEART_RATE_THRESHOLD_SENSORS: tuple[MyGarminSensorDescription, ...] = (
+    _threshold("abnormal_heart_rate_high_threshold", "abnormalHrThresholdValue"),
+    _threshold("abnormal_heart_rate_low_threshold", "lowAbnormalHrThresholdValue"),
+)
+
+
 async def async_setup_entry(
     hass: HomeAssistant,
     entry: MyGarminConfigEntry,
@@ -1215,6 +1236,10 @@ async def async_setup_entry(
             ),
             MyGarminKeyExpirySensor(data.daily, KEY_EXPIRY_SENSOR),
             *(MyGarminSensor(data.spo2, description) for description in SPO2_SENSORS),
+            *(
+                MyGarminSensor(data.heart_rate_thresholds, description)
+                for description in HEART_RATE_THRESHOLD_SENSORS
+            ),
             *(
                 MyGarminSensor(data.daily, description)
                 for description in ALTITUDE_SENSORS

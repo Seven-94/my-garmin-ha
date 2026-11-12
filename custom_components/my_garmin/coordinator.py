@@ -326,6 +326,30 @@ class SpO2Coordinator(LastNightCoordinator):
         )
 
 
+# The abnormal heart rate thresholds are alert settings, changed by hand in the
+# app: like the zones, a watch sync does not change them.
+HEART_RATE_THRESHOLDS_INTERVAL = timedelta(hours=6)
+
+
+class HeartRateThresholdsCoordinator(MyGarminCoordinator):
+    """Today's heart rate response, for its alert thresholds; every six hours."""
+
+    def __init__(
+        self,
+        hass: HomeAssistant,
+        entry: ConfigEntry[MyGarminData],
+        client: GarminPersonalClient,
+    ) -> None:
+        super().__init__(
+            hass,
+            entry,
+            client,
+            name="heart rate thresholds",
+            update_interval=HEART_RATE_THRESHOLDS_INTERVAL,
+            fetch=client.get_daily_heart_rate,
+        )
+
+
 def _last_sync(coordinator: DailySummaryCoordinator) -> object:
     return (coordinator.data or {}).get("lastSyncTimestampGMT")
 
@@ -391,3 +415,4 @@ class MyGarminData:
     fitness_age: FitnessAgeCoordinator
     heart_rate_zones: HeartRateZonesCoordinator
     spo2: SpO2Coordinator
+    heart_rate_thresholds: HeartRateThresholdsCoordinator

@@ -76,6 +76,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   latest SpO2 (same values as the daily summary), average during tomorrow's
   sleep and average altitude are disabled by default. Devices without SpO2 get
   unknown values, without errors.
+- Abnormal heart rate alert thresholds (high and low), diagnostic sensors
+  refreshed every six hours. An alert that is off, or a day without data, shows
+  unknown.
 
 ### Changed
 

@@ -89,6 +89,17 @@ class GarminPersonalClient:
             null_is_empty=True,
         )
 
+    async def get_daily_heart_rate(self, day: date) -> JsonObject:
+        """Heart rates of the day and the abnormal heart rate alert thresholds.
+
+        Empty when Garmin answers a null body: no data for that day.
+        """
+        return await self._get_object(
+            "/wellness-service/wellness/dailyHeartRate",
+            {"date": day.isoformat()},
+            null_is_empty=True,
+        )
+
     async def get_weight_range(self, start: date, end: date) -> JsonObject:
         """Weigh-ins between two days, and the last one before them."""
         # weight/all answers HTTP 400: weight/range is the working endpoint.
