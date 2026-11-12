@@ -476,3 +476,32 @@ async def test_get_hydration_rejects_anything_but_a_list_of_objects(
     day = date(2026, 11, 10)
     with pytest.raises(GarminApiError):
         await client.get_hydration(day, day)
+
+
+NUTRITION_PATH = "/nutrition-service/food/logs/2026-11-10"
+
+
+async def test_get_nutrition_asks_for_the_day_without_media(
+    client: GarminPersonalClient,
+) -> None:
+    nutrition = await client.get_nutrition(date(2026, 11, 10))
+
+    assert nutrition == {"path": NUTRITION_PATH, "query": {"includeMedia": "false"}}
+
+
+@pytest.mark.parametrize("body", ["null", ""])
+async def test_get_nutrition_without_data_returns_an_empty_object(
+    client: GarminPersonalClient, fake_garmin: FakeGarmin, body: str
+) -> None:
+    fake_garmin.data_replies[NUTRITION_PATH] = [Reply(body=body)]
+
+    assert await client.get_nutrition(date(2026, 11, 10)) == {}
+
+
+async def test_get_nutrition_rejects_a_payload_that_is_not_an_object(
+    client: GarminPersonalClient, fake_garmin: FakeGarmin
+) -> None:
+    fake_garmin.data_replies[NUTRITION_PATH] = [Reply(body="[1, 2]")]
+
+    with pytest.raises(GarminApiError):
+        await client.get_nutrition(date(2026, 11, 10))

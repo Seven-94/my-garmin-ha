@@ -1246,6 +1246,51 @@ HYDRATION_SENSORS: tuple[MyGarminSensorDescription, ...] = (
 )
 
 
+def _nutrition(
+    key: str, section: str, field: str, unit: str, *, goal: bool
+) -> MyGarminSensorDescription:
+    """A nutrient of today's food log, consumed or targeted; disabled by default."""
+    read = _measure(field, zero_is_missing=goal)
+    return MyGarminSensorDescription(
+        key=key,
+        translation_key=key,
+        native_unit_of_measurement=unit,
+        device_class=None if unit == UNIT_KCAL else SensorDeviceClass.WEIGHT,
+        suggested_display_precision=0,
+        # Logged food can be deleted: not a total that only grows. A goal is a
+        # target, not a measurement: no statistics.
+        state_class=None if goal else SensorStateClass.MEASUREMENT,
+        entity_registry_enabled_default=False,
+        value_fn=lambda data: read(_nested(data, section)),
+    )
+
+
+def _consumed(key: str, field: str) -> MyGarminSensorDescription:
+    return _nutrition(key, "dailyNutritionContent", field, UnitOfMass.GRAMS, goal=False)
+
+
+def _nutrition_goal(key: str, field: str, unit: str) -> MyGarminSensorDescription:
+    return _nutrition(key, "dailyNutritionGoals", field, unit, goal=True)
+
+
+# The day's calories consumed come from the daily summary: not repeated here.
+NUTRITION_SENSORS: tuple[MyGarminSensorDescription, ...] = (
+    _consumed("nutrition_carbs", "carbs"),
+    _consumed("nutrition_protein", "protein"),
+    _consumed("nutrition_fat", "fat"),
+    _nutrition_goal("nutrition_calorie_goal", "calories", UNIT_KCAL),
+    _nutrition_goal("nutrition_carbs_goal", "carbs", UnitOfMass.GRAMS),
+    _nutrition_goal("nutrition_protein_goal", "protein", UnitOfMass.GRAMS),
+    _nutrition_goal("nutrition_fat_goal", "fat", UnitOfMass.GRAMS),
+    _nutrition_goal("nutrition_adjusted_calorie_goal", "adjustedCalories", UNIT_KCAL),
+    _nutrition_goal("nutrition_adjusted_carbs_goal", "adjustedCarbs", UnitOfMass.GRAMS),
+    _nutrition_goal(
+        "nutrition_adjusted_protein_goal", "adjustedProtein", UnitOfMass.GRAMS
+    ),
+    _nutrition_goal("nutrition_adjusted_fat_goal", "adjustedFat", UnitOfMass.GRAMS),
+)
+
+
 async def async_setup_entry(
     hass: HomeAssistant,
     entry: MyGarminConfigEntry,
@@ -1283,6 +1328,10 @@ async def async_setup_entry(
             *(
                 MyGarminSensor(data.hydration, description)
                 for description in HYDRATION_SENSORS
+            ),
+            *(
+                MyGarminSensor(data.nutrition, description)
+                for description in NUTRITION_SENSORS
             ),
             *(
                 MyGarminSensor(data.daily, description)
