@@ -657,6 +657,22 @@
       },
       "menstrual_pregnancy_week": {
         "name": "Pregnancy week"
+      },
+      "body_battery_feedback": {
+        "name": "Body Battery feedback"
+      },
+      "body_battery_end_of_day_feedback": {
+        "name": "Body Battery end-of-day feedback"
+      },
+      "body_battery_latest_event": {
+        "name": "Latest Body Battery event",
+        "state": {
+          "activity": "Activity",
+          "sleep": "Sleep",
+          "stress": "Stress",
+          "recovery": "Recovery",
+          "nap": "Nap"
+        }
       }
     },
     "event": {

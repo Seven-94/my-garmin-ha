@@ -443,6 +443,46 @@ class MenstrualCycleCoordinator(MyGarminCoordinator):
         return {MENSTRUAL_CYCLE_KEY: await self.client.get_menstrual_cycle(day)}
 
 
+# The report keeps its events and feedback: the readings, hundreds of rows a day,
+# are left to long-term statistics.
+BODY_BATTERY_EVENT_FIELDS = (
+    "date",
+    "bodyBatteryDynamicFeedbackEvent",
+    "endOfDayBodyBatteryDynamicFeedbackEvent",
+    "bodyBatteryActivityEvent",
+)
+
+
+class BodyBatteryEventsCoordinator(MyGarminCoordinator):
+    """Today's Body Battery events and feedback, after each watch sync."""
+
+    def __init__(
+        self,
+        hass: HomeAssistant,
+        entry: ConfigEntry[MyGarminData],
+        client: GarminPersonalClient,
+    ) -> None:
+        super().__init__(
+            hass,
+            entry,
+            client,
+            name="Body Battery events",
+            # Events come with a watch sync; this is the safety net.
+            update_interval=NIGHT_INTERVAL,
+            fetch=self._async_fetch_events,
+        )
+
+    async def _async_fetch_events(self, day: date) -> JsonObject:
+        reports = await self.client.get_body_battery_reports(day, day)
+        today = next(
+            (report for report in reports if report.get("date") == day.isoformat()),
+            {},
+        )
+        return {
+            field: today[field] for field in BODY_BATTERY_EVENT_FIELDS if field in today
+        }
+
+
 def _last_sync(coordinator: DailySummaryCoordinator) -> object:
     return (coordinator.data or {}).get("lastSyncTimestampGMT")
 
@@ -512,3 +552,4 @@ class MyGarminData:
     hydration: HydrationCoordinator
     nutrition: NutritionCoordinator
     menstrual_cycle: MenstrualCycleCoordinator
+    body_battery_events: BodyBatteryEventsCoordinator

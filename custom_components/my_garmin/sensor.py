@@ -1369,6 +1369,95 @@ MENSTRUAL_CYCLE_SENSORS: tuple[MyGarminSensorDescription, ...] = (
 )
 
 
+BODY_BATTERY_EVENT_TYPES = ["activity", "sleep", "stress", "recovery", "nap"]
+
+
+def _feedback_attributes(field: str) -> Callable[[JsonObject], dict[str, Any]]:
+    def attributes(data: JsonObject) -> dict[str, Any]:
+        event = _nested(data, field)
+        time = _utc(event.get("eventTimestampGmt"))
+        return {
+            "long_feedback": _code(event.get("feedbackLongType")),
+            "level": _code(event.get("bodyBatteryLevel")),
+            "time": time.isoformat() if time else None,
+        }
+
+    return attributes
+
+
+def _feedback(key: str, field: str, *, enabled: bool) -> MyGarminSensorDescription:
+    """A Body Battery feedback, as Garmin's text key: no published list of keys."""
+    return MyGarminSensorDescription(
+        key=key,
+        translation_key=key,
+        entity_registry_enabled_default=enabled,
+        value_fn=lambda data: _code(_nested(data, field).get("feedbackShortType")),
+        attributes_fn=_feedback_attributes(field),
+    )
+
+
+def _event_summary(event: JsonObject) -> dict[str, Any]:
+    start = _utc(event.get("eventStartTimeGmt"))
+    duration = _measure("durationInMilliseconds")(event)
+    impact = event.get("bodyBatteryImpact")
+    return {
+        "type": _code(event.get("eventType")),
+        "start": start.isoformat() if start else None,
+        "duration_seconds": round(duration / 1000) if duration is not None else None,
+        # Signed: drains are negative.
+        "impact": impact
+        if isinstance(impact, int) and not isinstance(impact, bool)
+        else None,
+        "feedback": _code(event.get("feedbackType")),
+        "short_feedback": _code(event.get("shortFeedback")),
+    }
+
+
+def body_battery_events(data: JsonObject) -> list[dict[str, Any]]:
+    """Today's events, oldest first, each once: Garmin may repeat a row."""
+    events = data.get("bodyBatteryActivityEvent")
+    if not isinstance(events, list):
+        return []
+    unique: dict[tuple[Any, ...], dict[str, Any]] = {}
+    for event in events:
+        if isinstance(event, dict):
+            summary = _event_summary(event)
+            unique.setdefault((summary["type"], summary["start"]), summary)
+    return sorted(unique.values(), key=lambda event: event["start"] or "")
+
+
+def _latest_event(data: JsonObject) -> dict[str, Any]:
+    return next(reversed(body_battery_events(data)), {})
+
+
+def _latest_event_type(data: JsonObject) -> StateValue:
+    event_type = _latest_event(data).get("type")
+    return _option(event_type, BODY_BATTERY_EVENT_TYPES, "Body Battery event")
+
+
+def _latest_event_attributes(data: JsonObject) -> dict[str, Any]:
+    latest = {k: v for k, v in _latest_event(data).items() if k != "type"}
+    return {**latest, "events": body_battery_events(data)}
+
+
+BODY_BATTERY_EVENT_SENSORS: tuple[MyGarminSensorDescription, ...] = (
+    _feedback("body_battery_feedback", "bodyBatteryDynamicFeedbackEvent", enabled=True),
+    _feedback(
+        "body_battery_end_of_day_feedback",
+        "endOfDayBodyBatteryDynamicFeedbackEvent",
+        enabled=False,
+    ),
+    MyGarminSensorDescription(
+        key="body_battery_latest_event",
+        translation_key="body_battery_latest_event",
+        device_class=SensorDeviceClass.ENUM,
+        options=BODY_BATTERY_EVENT_TYPES,
+        value_fn=_latest_event_type,
+        attributes_fn=_latest_event_attributes,
+    ),
+)
+
+
 async def async_setup_entry(
     hass: HomeAssistant,
     entry: MyGarminConfigEntry,
@@ -1414,6 +1503,10 @@ async def async_setup_entry(
             *(
                 MyGarminSensor(data.menstrual_cycle, description)
                 for description in MENSTRUAL_CYCLE_SENSORS
+            ),
+            *(
+                MyGarminSensor(data.body_battery_events, description)
+                for description in BODY_BATTERY_EVENT_SENSORS
             ),
             *(
                 MyGarminSensor(data.daily, description)

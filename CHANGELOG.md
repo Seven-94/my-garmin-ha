@@ -23,6 +23,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   days, pregnancy week during a pregnancy, and a predicted cycle binary
   sensor. Refreshed every hour. The day view (symptoms, flow, mood) is never
   requested, and the diagnostics drop the whole cycle.
+- Body Battery events and feedback, refreshed after each watch sync: the
+  latest feedback (end-of-day feedback disabled by default), as Garmin's text
+  keys, and the latest event (activity, sleep, stress, recovery or nap) with
+  its impact and duration, and the day's events, sorted and without repeated
+  rows, as attributes.
 
 ### Fixed
 
