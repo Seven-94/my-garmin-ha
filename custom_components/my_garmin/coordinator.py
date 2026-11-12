@@ -483,6 +483,60 @@ class BodyBatteryEventsCoordinator(MyGarminCoordinator):
         }
 
 
+# Health monitoring sessions are occasional: a week finds the latest one, and
+# the last one found stays shown after it.
+WELLNESS_DAYS = 7
+# What a session's sensor shows: its name, free-text notes and device are
+# dropped on receipt.
+WELLNESS_SESSION_FIELDS = (
+    "calendarDate",
+    "wellnessActivityType",
+    "startTimestampGMT",
+    "endTimestampGMT",
+    "summaryTypeDataList",
+    "timeInZoneList",
+)
+
+
+def _session_start(session: JsonObject) -> str:
+    # Garmin's GMT timestamps share one ISO format: text order is time order.
+    start = session.get("startTimestampGMT")
+    return start if isinstance(start, str) else ""
+
+
+class WellnessActivitiesCoordinator(MyGarminCoordinator):
+    """The latest health monitoring session, after each watch sync."""
+
+    def __init__(
+        self,
+        hass: HomeAssistant,
+        entry: ConfigEntry[MyGarminData],
+        client: GarminPersonalClient,
+    ) -> None:
+        super().__init__(
+            hass,
+            entry,
+            client,
+            name="wellness activities",
+            # Sessions come with a watch sync; this is the safety net.
+            update_interval=NIGHT_INTERVAL,
+            fetch=self._async_fetch_sessions,
+        )
+
+    async def _async_fetch_sessions(self, day: date) -> JsonObject:
+        start = day - timedelta(days=WELLNESS_DAYS - 1)
+        sessions = await self.client.get_wellness_activities(start, day)
+        latest = max(
+            (session for session in sessions if _session_start(session)),
+            key=_session_start,
+            default=None,
+        )
+        if latest is None:
+            # A quiet week does not erase the last session seen.
+            return self.data or {}
+        return {field: latest.get(field) for field in WELLNESS_SESSION_FIELDS}
+
+
 def _last_sync(coordinator: DailySummaryCoordinator) -> object:
     return (coordinator.data or {}).get("lastSyncTimestampGMT")
 
@@ -553,3 +607,4 @@ class MyGarminData:
     nutrition: NutritionCoordinator
     menstrual_cycle: MenstrualCycleCoordinator
     body_battery_events: BodyBatteryEventsCoordinator
+    wellness_activities: WellnessActivitiesCoordinator

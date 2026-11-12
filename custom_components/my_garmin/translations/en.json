@@ -673,6 +673,9 @@
           "recovery": "Recovery",
           "nap": "Nap"
         }
+      },
+      "wellness_latest_session": {
+        "name": "Latest health monitoring session"
       }
     },
     "event": {

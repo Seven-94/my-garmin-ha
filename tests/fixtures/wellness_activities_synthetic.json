@@ -1,0 +1,46 @@
+[
+  {
+    "userProfilePk": 10000001,
+    "activityUuid": "00000000-0000-0000-0000-000000000001",
+    "calendarDate": "2026-11-06",
+    "rulePK": 2,
+    "activityName": "Synthetic session name",
+    "notes": "Synthetic free-text note",
+    "wellnessActivityType": "HEALTH_MONITORING",
+    "startTimestampGMT": "2026-11-06T07:00:00.0",
+    "endTimestampGMT": "2026-11-06T07:02:00.0",
+    "startTimestampLocal": "2026-11-06T08:00:00.0",
+    "endTimestampLocal": "2026-11-06T08:02:00.0",
+    "summaryTypeDataList": [
+      {"summaryType": "HEART_RATE", "minValue": 55.0, "maxValue": 70.0, "avgValue": 60.0}
+    ],
+    "timeInZoneList": [],
+    "deviceMetaData": {"deviceId": 1}
+  },
+  {
+    "userProfilePk": 10000001,
+    "activityUuid": "00000000-0000-0000-0000-000000000002",
+    "calendarDate": "2026-11-08",
+    "rulePK": 2,
+    "activityName": "Synthetic session name",
+    "notes": "Synthetic free-text note",
+    "wellnessActivityType": "HEALTH_MONITORING",
+    "startTimestampGMT": "2026-11-08T06:30:00.0",
+    "endTimestampGMT": "2026-11-08T06:32:00.0",
+    "startTimestampLocal": "2026-11-08T07:30:00.0",
+    "endTimestampLocal": "2026-11-08T07:32:00.0",
+    "summaryTypeDataList": [
+      {"summaryType": "HEART_RATE", "minValue": 52.0, "maxValue": 68.0, "avgValue": 58.5},
+      {"summaryType": "STRESS", "minValue": 10.0, "maxValue": 35.0, "avgValue": 20.0},
+      {"summaryType": "RESPIRATION", "minValue": 12.0, "maxValue": 16.0, "avgValue": 14.0},
+      {"summaryType": "SPO2", "minValue": 94.0, "maxValue": 99.0, "avgValue": 97.0},
+      {"summaryType": "RMSSD_HRV", "minValue": 30.0, "maxValue": 60.0, "avgValue": 45.0},
+      {"summaryType": "SDRR_HRV", "minValue": 40.0, "maxValue": 75.0, "avgValue": 55.0}
+    ],
+    "timeInZoneList": [
+      {"zoneNumber": 1, "millisInZone": 90000, "zoneLowBoundary": 50},
+      {"zoneNumber": 2, "millisInZone": 30000, "zoneLowBoundary": 65}
+    ],
+    "deviceMetaData": {"deviceId": 1}
+  }
+]
