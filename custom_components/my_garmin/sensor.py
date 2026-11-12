@@ -1291,6 +1291,84 @@ NUTRITION_SENSORS: tuple[MyGarminSensorDescription, ...] = (
 )
 
 
+def menstrual_cycle(data: JsonObject) -> JsonObject:
+    """The cycle summary a MenstrualCycleCoordinator keeps, or {}."""
+    return _nested(data, "menstrualCycle")
+
+
+def _cycle_dates(data: JsonObject) -> dict[str, Any]:
+    cycle = menstrual_cycle(data)
+    return {
+        "cycle_start": cycle.get("startDate"),
+        "cycle_end": cycle.get("endDate"),
+        "cycle_type": _code(cycle.get("cycleType")),
+        "predicted_ovulation": cycle.get("predictedOvulationDate"),
+        "skin_temperature_used": (
+            skin if isinstance(skin := cycle.get("isSkinTempMct"), bool) else None
+        ),
+    }
+
+
+def _pregnancy_dates(data: JsonObject) -> dict[str, Any]:
+    cycle = menstrual_cycle(data)
+    return {
+        "due_date": cycle.get("dueDate"),
+        "delivery_date": cycle.get("deliveryDate"),
+    }
+
+
+def _pregnancy_week(data: JsonObject) -> StateValue:
+    # Garmin may leave a week number on a regular cycle: shown during a pregnancy only.
+    cycle = menstrual_cycle(data)
+    if cycle.get("pregnancyCycle") is not True:
+        return None
+    return _measure("numberOfWeek", zero_is_missing=True)(cycle)
+
+
+def _cycle(
+    key: str,
+    field: str,
+    *,
+    days: bool,
+    attributes_fn: Callable[[JsonObject], dict[str, Any]] | None = None,
+) -> MyGarminSensorDescription:
+    """A value of today's cycle, disabled by default: a count of days, or a
+    position in the cycle (no unit). Neither is a measurement worth statistics.
+    """
+    read = _measure(field)
+    return MyGarminSensorDescription(
+        key=key,
+        translation_key=key,
+        native_unit_of_measurement=UnitOfTime.DAYS if days else None,
+        device_class=SensorDeviceClass.DURATION if days else None,
+        entity_registry_enabled_default=False,
+        value_fn=lambda data: read(menstrual_cycle(data)),
+        attributes_fn=attributes_fn,
+    )
+
+
+MENSTRUAL_CYCLE_SENSORS: tuple[MyGarminSensorDescription, ...] = (
+    # Garmin documents the phase as an identifier without its values: shown as
+    # sent rather than mapped to a guessed name.
+    _cycle("menstrual_cycle_phase", "currentPhase", days=False),
+    _cycle("menstrual_cycle_day", "dayInCycle", days=False, attributes_fn=_cycle_dates),
+    _cycle("menstrual_days_until_next_phase", "daysUntilNextPhase", days=True),
+    _cycle("menstrual_phase_length", "lengthOfCurrentPhase", days=True),
+    _cycle("menstrual_predicted_cycle_length", "predictedCycleLength", days=True),
+    _cycle("menstrual_period_length", "periodLength", days=True),
+    _cycle("menstrual_fertile_window_start", "fertileWindowStart", days=False),
+    _cycle("menstrual_fertile_window_length", "lengthOfFertileWindow", days=True),
+    _cycle("menstrual_luteal_phase_start", "lutealPhaseStart", days=False),
+    MyGarminSensorDescription(
+        key="menstrual_pregnancy_week",
+        translation_key="menstrual_pregnancy_week",
+        entity_registry_enabled_default=False,
+        value_fn=_pregnancy_week,
+        attributes_fn=_pregnancy_dates,
+    ),
+)
+
+
 async def async_setup_entry(
     hass: HomeAssistant,
     entry: MyGarminConfigEntry,
@@ -1332,6 +1410,10 @@ async def async_setup_entry(
             *(
                 MyGarminSensor(data.nutrition, description)
                 for description in NUTRITION_SENSORS
+            ),
+            *(
+                MyGarminSensor(data.menstrual_cycle, description)
+                for description in MENSTRUAL_CYCLE_SENSORS
             ),
             *(
                 MyGarminSensor(data.daily, description)

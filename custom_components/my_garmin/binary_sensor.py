@@ -51,6 +51,20 @@ BINARY_SENSORS: tuple[MyGarminBinarySensorDescription, ...] = (
 )
 
 
+def _cycle_predicted(data: JsonObject) -> bool | None:
+    cycle = data.get("menstrualCycle")
+    return _flag("predictedCycle")(cycle) if isinstance(cycle, dict) else None
+
+
+# On when Garmin predicts the current cycle rather than reading it from logs.
+MENSTRUAL_CYCLE_PREDICTED = MyGarminBinarySensorDescription(
+    key="menstrual_cycle_predicted",
+    translation_key="menstrual_cycle_predicted",
+    entity_registry_enabled_default=False,
+    value_fn=_cycle_predicted,
+)
+
+
 async def async_setup_entry(
     hass: HomeAssistant,
     entry: MyGarminConfigEntry,
@@ -62,6 +76,9 @@ async def async_setup_entry(
         [
             *(MyGarminBinarySensor(daily, d) for d in BINARY_SENSORS),
             MyGarminSyncOverdueSensor(daily, SYNC_OVERDUE),
+            MyGarminBinarySensor(
+                entry.runtime_data.menstrual_cycle, MENSTRUAL_CYCLE_PREDICTED
+            ),
         ]
     )
 

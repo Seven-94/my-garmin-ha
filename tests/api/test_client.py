@@ -505,3 +505,32 @@ async def test_get_nutrition_rejects_a_payload_that_is_not_an_object(
 
     with pytest.raises(GarminApiError):
         await client.get_nutrition(date(2026, 11, 10))
+
+
+CYCLE_PATH = "/periodichealth-service/menstrualcycle/summary/2026-11-10"
+
+
+async def test_get_menstrual_cycle_puts_the_date_in_the_path(
+    client: GarminPersonalClient,
+) -> None:
+    cycle = await client.get_menstrual_cycle(date(2026, 11, 10))
+
+    assert cycle == {"path": CYCLE_PATH, "query": {}}
+
+
+@pytest.mark.parametrize("body", ["null", ""])
+async def test_get_menstrual_cycle_without_data_returns_an_empty_object(
+    client: GarminPersonalClient, fake_garmin: FakeGarmin, body: str
+) -> None:
+    fake_garmin.data_replies[CYCLE_PATH] = [Reply(body=body)]
+
+    assert await client.get_menstrual_cycle(date(2026, 11, 10)) == {}
+
+
+async def test_get_menstrual_cycle_rejects_a_payload_that_is_not_an_object(
+    client: GarminPersonalClient, fake_garmin: FakeGarmin
+) -> None:
+    fake_garmin.data_replies[CYCLE_PATH] = [Reply(body="[1, 2]")]
+
+    with pytest.raises(GarminApiError):
+        await client.get_menstrual_cycle(date(2026, 11, 10))
