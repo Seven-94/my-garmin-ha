@@ -22,11 +22,13 @@ from homeassistant.const import (
     UnitOfVolume,
 )
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.util import dt as dt_util
 
 from . import MyGarminConfigEntry
 from .api import JsonObject
+from .const import DOMAIN
 from .coordinator import MyGarminCoordinator
 from .entity import MyGarminEntity
 from .key_expiry import key_expires
@@ -1527,7 +1529,6 @@ async def async_setup_entry(
     entry: MyGarminConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
-    del hass
     data = entry.runtime_data
     async_add_entities(
         [
@@ -1570,7 +1571,7 @@ async def async_setup_entry(
             ),
             *(
                 MyGarminSensor(data.body_battery_events, description)
-                for description in BODY_BATTERY_EVENT_SENSORS
+                for description in _body_battery_event_sensors(hass, entry)
             ),
             MyGarminSensor(data.wellness_activities, WELLNESS_SESSION_SENSOR),
             *(
@@ -1579,6 +1580,28 @@ async def async_setup_entry(
             ),
         ]
     )
+
+
+def _body_battery_event_sensors(
+    hass: HomeAssistant, entry: MyGarminConfigEntry
+) -> tuple[MyGarminSensorDescription, ...]:
+    """The event sensors, unless Garmin sends no events for this watch.
+
+    Their sensors would stay unknown for good: they are not created, and those
+    an older version created are removed. A failed first refresh proves
+    nothing, so the sensors are then kept.
+    """
+    coordinator = entry.runtime_data.body_battery_events
+    if coordinator.provides_events or not coordinator.last_update_success:
+        return BODY_BATTERY_EVENT_SENSORS
+    registry = er.async_get(hass)
+    for description in BODY_BATTERY_EVENT_SENSORS:
+        entity_id = registry.async_get_entity_id(
+            "sensor", DOMAIN, f"{entry.unique_id}_{description.key}"
+        )
+        if entity_id is not None:
+            registry.async_remove(entity_id)
+    return ()
 
 
 class MyGarminSensor(MyGarminEntity, SensorEntity):

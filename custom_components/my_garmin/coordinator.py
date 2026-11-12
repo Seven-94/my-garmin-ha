@@ -444,14 +444,21 @@ class MenstrualCycleCoordinator(MyGarminCoordinator):
         return {MENSTRUAL_CYCLE_KEY: await self.client.get_menstrual_cycle(day)}
 
 
-# The report keeps its events and feedback: the readings, hundreds of rows a day,
-# are left to long-term statistics.
-BODY_BATTERY_EVENT_FIELDS = (
-    "date",
+# What only some watches make: others send a report with readings alone, though
+# Garmin's schema lists these fields for every report.
+BODY_BATTERY_EVENT_DATA = (
     "bodyBatteryDynamicFeedbackEvent",
     "endOfDayBodyBatteryDynamicFeedbackEvent",
     "bodyBatteryActivityEvent",
 )
+# The report keeps its events and feedback: the readings, hundreds of rows a day,
+# are left to long-term statistics.
+BODY_BATTERY_EVENT_FIELDS = ("date", *BODY_BATTERY_EVENT_DATA)
+
+
+def has_body_battery_events(report: JsonObject) -> bool:
+    """Whether a daily report carries events or feedback, even an empty list."""
+    return any(report.get(field) is not None for field in BODY_BATTERY_EVENT_DATA)
 
 
 class BodyBatteryEventsCoordinator(MyGarminCoordinator):
@@ -472,9 +479,17 @@ class BodyBatteryEventsCoordinator(MyGarminCoordinator):
             update_interval=NIGHT_INTERVAL,
             fetch=self._async_fetch_events,
         )
+        # Whether this watch makes events at all: once seen, it does.
+        self.provides_events = False
 
     async def _async_fetch_events(self, day: date) -> JsonObject:
-        reports = await self.client.get_body_battery_reports(day, day)
+        # Yesterday is a whole day: just after midnight, today alone would not
+        # tell a watch without events from a day without any yet.
+        reports = await self.client.get_body_battery_reports(
+            day - timedelta(days=1), day
+        )
+        if any(has_body_battery_events(report) for report in reports):
+            self.provides_events = True
         today = next(
             (report for report in reports if report.get("date") == day.isoformat()),
             {},

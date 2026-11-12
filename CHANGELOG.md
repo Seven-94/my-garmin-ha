@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- The Body Battery event and feedback sensors are no longer created when
+  Garmin sends no events or feedback for the watch (some watches only make the
+  day's readings): they stayed unknown for good. Those created by 0.2.0 or
+  0.2.1 are removed. The integration looks at yesterday's and today's reports,
+  in the same request; a watch that starts sending events gets them back at
+  the next reload.
+
 ## [0.2.1] - 2026-11-12
 
 ### Fixed
