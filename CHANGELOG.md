@@ -28,6 +28,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   keys, and the latest event (activity, sleep, stress, recovery or nap) with
   its impact and duration, and the day's events, sorted and without repeated
   rows, as attributes.
+- Latest health monitoring session, disabled by default: its start time, with
+  its type, end, duration, the lowest, average and highest value of each
+  metric (heart rate, stress, respiration, SpO2, HRV) and the time in each zone
+  as attributes. Refreshed after each watch sync; the last session stays shown
+  until the next one. Session names and notes are never read.
 
 ### Fixed
 

@@ -569,3 +569,41 @@ async def test_get_body_battery_reports_rejects_anything_but_a_list_of_objects(
     day = date(2026, 11, 10)
     with pytest.raises(GarminApiError):
         await client.get_body_battery_reports(day, day)
+
+
+WELLNESS_PATH = "/wellnessactivity-service/activity/summary/range/2026-11-04/2026-11-10"
+
+
+async def test_get_wellness_activities_returns_the_sessions(
+    client: GarminPersonalClient, fake_garmin: FakeGarmin
+) -> None:
+    fake_garmin.data_replies[WELLNESS_PATH] = [Reply(body='[{"calendarDate": "x"}]')]
+
+    sessions = await client.get_wellness_activities(
+        date(2026, 11, 4), date(2026, 11, 10)
+    )
+
+    assert sessions == [{"calendarDate": "x"}]
+
+
+@pytest.mark.parametrize("body", ["null", ""])
+async def test_get_wellness_activities_without_data_returns_an_empty_list(
+    client: GarminPersonalClient, fake_garmin: FakeGarmin, body: str
+) -> None:
+    fake_garmin.data_replies[WELLNESS_PATH] = [Reply(body=body)]
+
+    sessions = await client.get_wellness_activities(
+        date(2026, 11, 4), date(2026, 11, 10)
+    )
+
+    assert sessions == []
+
+
+@pytest.mark.parametrize("body", ['{"calendarDate": "x"}', "[1, 2]"])
+async def test_get_wellness_activities_rejects_anything_but_a_list_of_objects(
+    client: GarminPersonalClient, fake_garmin: FakeGarmin, body: str
+) -> None:
+    fake_garmin.data_replies[WELLNESS_PATH] = [Reply(body=body)]
+
+    with pytest.raises(GarminApiError):
+        await client.get_wellness_activities(date(2026, 11, 4), date(2026, 11, 10))

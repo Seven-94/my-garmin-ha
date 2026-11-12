@@ -1458,6 +1458,68 @@ BODY_BATTERY_EVENT_SENSORS: tuple[MyGarminSensorDescription, ...] = (
 )
 
 
+def _session_metrics(data: JsonObject) -> dict[str, dict[str, Any]]:
+    """Lowest, average and highest value of each metric, by Garmin's type."""
+    metrics = data.get("summaryTypeDataList")
+    if not isinstance(metrics, list):
+        return {}
+    return {
+        metric_type: {
+            "min": _measure("minValue")(metric),
+            "avg": _measure("avgValue")(metric),
+            "max": _measure("maxValue")(metric),
+        }
+        for metric in metrics
+        if isinstance(metric, dict)
+        and (metric_type := _code(metric.get("summaryType")))
+    }
+
+
+def _session_zones(data: JsonObject) -> list[dict[str, Any]]:
+    zones = data.get("timeInZoneList")
+    if not isinstance(zones, list):
+        return []
+    result = []
+    for zone in zones:
+        if not isinstance(zone, dict):
+            continue
+        millis = _measure("millisInZone")(zone)
+        result.append(
+            {
+                "zone": zone.get("zoneNumber"),
+                "seconds": round(millis / 1000) if millis is not None else None,
+                "low_boundary": zone.get("zoneLowBoundary"),
+            }
+        )
+    return result
+
+
+def _session_attributes(data: JsonObject) -> dict[str, Any]:
+    start = _utc(data.get("startTimestampGMT"))
+    end = _utc(data.get("endTimestampGMT"))
+    return {
+        "type": _code(data.get("wellnessActivityType")),
+        "day": data.get("calendarDate"),
+        "end": end.isoformat() if end else None,
+        "duration_seconds": (
+            round((end - start).total_seconds()) if start and end else None
+        ),
+        "metrics": _session_metrics(data),
+        "time_in_zones": _session_zones(data),
+    }
+
+
+# A health monitoring session is started by hand on some watches: niche.
+WELLNESS_SESSION_SENSOR = MyGarminSensorDescription(
+    key="wellness_latest_session",
+    translation_key="wellness_latest_session",
+    device_class=SensorDeviceClass.TIMESTAMP,
+    entity_registry_enabled_default=False,
+    value_fn=_timestamp("startTimestampGMT"),
+    attributes_fn=_session_attributes,
+)
+
+
 async def async_setup_entry(
     hass: HomeAssistant,
     entry: MyGarminConfigEntry,
@@ -1508,6 +1570,7 @@ async def async_setup_entry(
                 MyGarminSensor(data.body_battery_events, description)
                 for description in BODY_BATTERY_EVENT_SENSORS
             ),
+            MyGarminSensor(data.wellness_activities, WELLNESS_SESSION_SENSOR),
             *(
                 MyGarminSensor(data.daily, description)
                 for description in ALTITUDE_SENSORS

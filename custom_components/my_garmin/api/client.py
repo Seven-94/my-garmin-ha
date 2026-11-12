@@ -206,6 +206,23 @@ class GarminPersonalClient:
             )
         return payload
 
+    async def get_wellness_activities(self, start: date, end: date) -> list[JsonObject]:
+        """Wellness activities (health monitoring sessions) between two days."""
+        path = (
+            "/wellnessactivity-service/activity/summary/range/"
+            f"{start.isoformat()}/{end.isoformat()}"
+        )
+        payload = await self.get(path)
+        if payload is None:
+            return []
+        if not isinstance(payload, list) or not all(
+            isinstance(item, dict) for item in payload
+        ):
+            raise GarminApiError(
+                HTTPStatus.OK, f"Expected a list of objects from {path}"
+            )
+        return payload
+
     async def get_hydration(self, start: date, end: date) -> list[JsonObject]:
         """Daily hydration between two days (31 at most), in millilitres."""
         path = (

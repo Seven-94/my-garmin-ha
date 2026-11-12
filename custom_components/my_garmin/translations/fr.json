@@ -673,6 +673,9 @@
           "recovery": "Récupération",
           "nap": "Sieste"
         }
+      },
+      "wellness_latest_session": {
+        "name": "Dernière session de surveillance de la santé"
       }
     },
     "event": {

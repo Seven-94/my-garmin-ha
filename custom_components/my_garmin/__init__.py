@@ -17,12 +17,14 @@ from .coordinator import (
     HrvCoordinator,
     HydrationCoordinator,
     MenstrualCycleCoordinator,
+    MyGarminCoordinator,
     MyGarminData,
     NutritionCoordinator,
     SleepCoordinator,
     SpO2Coordinator,
     SyncWatcher,
     WeightCoordinator,
+    WellnessActivitiesCoordinator,
 )
 from .key_expiry import async_remove_key_expiry_issue, async_track_key_expiry
 
@@ -79,6 +81,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: MyGarminConfigEntry) -> 
     await menstrual_cycle.async_refresh()
     body_battery_events = BodyBatteryEventsCoordinator(hass, entry, client)
     await body_battery_events.async_refresh()
+    wellness_activities = WellnessActivitiesCoordinator(hass, entry, client)
+    await wellness_activities.async_refresh()
 
     entry.runtime_data = MyGarminData(
         client=client,
@@ -95,9 +99,22 @@ async def async_setup_entry(hass: HomeAssistant, entry: MyGarminConfigEntry) -> 
         nutrition=nutrition,
         menstrual_cycle=menstrual_cycle,
         body_battery_events=body_battery_events,
+        wellness_activities=wellness_activities,
     )
-    dependents = [sleep, hrv, weight, activities, fitness_age, spo2, hydration]
-    watcher = SyncWatcher(hass, daily, [*dependents, nutrition, body_battery_events])
+    # Refreshed when the watch syncs: what it records, or what follows from it.
+    dependents: list[MyGarminCoordinator] = [
+        sleep,
+        hrv,
+        weight,
+        activities,
+        fitness_age,
+        spo2,
+        hydration,
+        nutrition,
+        body_battery_events,
+        wellness_activities,
+    ]
+    watcher = SyncWatcher(hass, daily, dependents)
     entry.async_on_unload(daily.async_add_listener(watcher))
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
