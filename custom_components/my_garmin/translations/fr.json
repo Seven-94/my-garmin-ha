@@ -508,6 +508,24 @@
       "key_expiry": {
         "name": "Expiration de la clé API"
       },
+      "fitness_age": {
+        "name": "Âge de forme"
+      },
+      "achievable_fitness_age": {
+        "name": "Âge de forme atteignable"
+      },
+      "previous_fitness_age": {
+        "name": "Âge de forme précédent"
+      },
+      "fitness_age_invalid_reason": {
+        "name": "Raison de l'absence d'âge de forme",
+        "state": {
+          "user_empty_age": "Âge absent du profil",
+          "user_under_age": "Trop jeune pour un âge de forme",
+          "user_over_age": "Trop âgé pour un âge de forme",
+          "user_pregnant": "Enceinte"
+        }
+      },
       "zones_max_heart_rate": {
         "name": "Fréquence cardiaque maximale des zones"
       },

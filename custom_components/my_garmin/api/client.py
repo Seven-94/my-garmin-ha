@@ -18,6 +18,11 @@ _LOGGER = logging.getLogger(__name__)
 type JsonObject = dict[str, Any]
 
 
+def _last_updated(entry: JsonObject) -> str:
+    # The timestamps share one ISO 8601 format, so text order is time order.
+    return str(entry.get("lastUpdated") or "")
+
+
 class _TokenRejectedError(Exception):
     """Internal signal: a data request answered 401."""
 
@@ -104,6 +109,28 @@ class GarminPersonalClient:
                 HTTPStatus.OK, f"Expected a list of objects from {path}"
             )
         return payload
+
+    async def get_fitness_age(self, day: date) -> JsonObject:
+        """The fitness age as of this day, or {} when Garmin has none.
+
+        Garmin answers one object, a list of entries, or null. A list is the
+        history: its most recently updated entry is the current one.
+        """
+        path = f"/fitnessage-service/fitnessage/v2/{day.isoformat()}"
+        # The default full history scan is kept: a measurement can be months old,
+        # beyond the 28 days a narrower scan looks at.
+        payload = await self.get(path)
+        if payload is None:
+            return {}
+        if isinstance(payload, dict):
+            return payload
+        if not isinstance(payload, list) or not all(
+            isinstance(item, dict) for item in payload
+        ):
+            raise GarminApiError(
+                HTTPStatus.OK, f"Expected an object or a list of objects from {path}"
+            )
+        return max(payload, key=_last_updated, default={})
 
     async def get_heart_rate_zones(self) -> list[JsonObject]:
         """Heart rate zones of each sport, with Garmin's defaults when none are set."""

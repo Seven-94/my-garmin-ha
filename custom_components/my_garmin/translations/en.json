@@ -508,6 +508,24 @@
       "key_expiry": {
         "name": "API key expiry"
       },
+      "fitness_age": {
+        "name": "Fitness age"
+      },
+      "achievable_fitness_age": {
+        "name": "Achievable fitness age"
+      },
+      "previous_fitness_age": {
+        "name": "Previous fitness age"
+      },
+      "fitness_age_invalid_reason": {
+        "name": "Fitness age invalid reason",
+        "state": {
+          "user_empty_age": "Age missing from the profile",
+          "user_under_age": "Too young for a fitness age",
+          "user_over_age": "Too old for a fitness age",
+          "user_pregnant": "Pregnant"
+        }
+      },
       "zones_max_heart_rate": {
         "name": "Zones maximum heart rate"
       },
