@@ -1,8 +1,10 @@
 """Data requests: endpoints, the single retry on 401, error mapping and secrecy."""
 
 import asyncio
+import json
 import logging
 from datetime import date
+from pathlib import Path
 
 import aiohttp
 import pytest
@@ -287,6 +289,62 @@ async def test_key_and_tokens_never_leak(
     for secret in secrets:
         for text in exposed:
             assert secret not in text
+
+
+FITNESS_AGE_PATH = "/fitnessage-service/fitnessage/v2/2026-11-10"
+FITNESS_FIXTURE = Path(__file__).parents[1] / "fixtures" / "fitness_age_synthetic.json"
+
+
+async def test_get_fitness_age_puts_the_date_in_the_path(
+    client: GarminPersonalClient,
+) -> None:
+    fitness = await client.get_fitness_age(date(2026, 11, 10))
+
+    # The default full history scan is kept: a measurement can be months old.
+    assert fitness == {"path": FITNESS_AGE_PATH, "query": {}}
+
+
+async def test_get_fitness_age_reads_a_single_object(
+    client: GarminPersonalClient, fake_garmin: FakeGarmin
+) -> None:
+    fixture = FITNESS_FIXTURE.read_text(encoding="utf-8")
+    fake_garmin.data_replies[FITNESS_AGE_PATH] = [Reply(body=fixture)]
+
+    fitness = await client.get_fitness_age(date(2026, 11, 10))
+
+    assert fitness == json.loads(fixture)
+
+
+async def test_get_fitness_age_reads_the_most_recently_updated_entry_of_a_list(
+    client: GarminPersonalClient, fake_garmin: FakeGarmin
+) -> None:
+    # The newest entry comes first: taking the last one would be wrong.
+    fitness = json.loads(FITNESS_FIXTURE.read_text(encoding="utf-8"))
+    older = {**fitness, "fitnessAge": 44.0, "lastUpdated": "2026-08-01T05:40:00.0"}
+    fake_garmin.data_replies[FITNESS_AGE_PATH] = [
+        Reply(body=json.dumps([fitness, older]))
+    ]
+
+    assert await client.get_fitness_age(date(2026, 11, 10)) == fitness
+
+
+@pytest.mark.parametrize("body", ["null", "", "[]"])
+async def test_get_fitness_age_without_data_returns_an_empty_object(
+    client: GarminPersonalClient, fake_garmin: FakeGarmin, body: str
+) -> None:
+    fake_garmin.data_replies[FITNESS_AGE_PATH] = [Reply(body=body)]
+
+    assert await client.get_fitness_age(date(2026, 11, 10)) == {}
+
+
+@pytest.mark.parametrize("body", ['"38.4"', "[1, 2]"])
+async def test_get_fitness_age_rejects_anything_but_an_object_or_a_list_of_objects(
+    client: GarminPersonalClient, fake_garmin: FakeGarmin, body: str
+) -> None:
+    fake_garmin.data_replies[FITNESS_AGE_PATH] = [Reply(body=body)]
+
+    with pytest.raises(GarminApiError):
+        await client.get_fitness_age(date(2026, 11, 10))
 
 
 SPO2_PATH = "/wellness-service/wellness/daily/spo2acclimation/2026-11-10"

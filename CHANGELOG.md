@@ -61,6 +61,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   identifiers, names, URLs, GPS positions and free text redacted; health
   measurements and times are replaced by their shape (type and digits);
   menstrual and nutrition data are left out.
+- Fitness age sensors, refreshed every six hours and after each watch sync:
+  fitness age, with its components and last update as attributes; achievable
+  and previous fitness age (previous one disabled by default); and the reason
+  there is no fitness age as a diagnostic sensor. The chronological age is
+  never read.
 - SpO2 and acclimation sensors: seven-day average and average during sleep,
   refreshed after each watch sync and every two hours. Average, lowest and
   latest SpO2 (same values as the daily summary), average during tomorrow's

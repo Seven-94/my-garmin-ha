@@ -1086,6 +1086,10 @@ async def async_setup_entry(
                 MyGarminSensor(data.activities, description)
                 for description in ACTIVITY_SENSORS
             ),
+            *(
+                MyGarminSensor(data.fitness_age, description)
+                for description in FITNESS_AGE_SENSORS
+            ),
             MyGarminKeyExpirySensor(data.daily, KEY_EXPIRY_SENSOR),
             *(MyGarminSensor(data.spo2, description) for description in SPO2_SENSORS),
             *(
@@ -1134,3 +1138,56 @@ class MyGarminKeyExpirySensor(MyGarminEntity, SensorEntity):
         super().__init__(coordinator, description)
         # A new date reloads the entry, which creates this entity again.
         self._attr_native_value = key_expires(coordinator.config_entry)
+
+
+def _fitness_age(
+    key: str, field: str, *, enabled: bool = True
+) -> MyGarminSensorDescription:
+    """An age in years, as Garmin computes it: one decimal is enough."""
+    return _number(key, field, UnitOfTime.YEARS, precision=1, enabled=enabled)
+
+
+def _fitness_age_attributes(data: JsonObject) -> dict[str, Any]:
+    # The chronological age is deliberately never read: it is personal data.
+    # Components are keyed by names that vary by device, so every field is kept
+    # rather than a fixed list.
+    components = {
+        _snake(name): {_snake(field): value for field, value in item.items()}
+        for name, item in _nested(data, "components").items()
+        if isinstance(item, dict)
+    }
+    return {"components": components, "last_updated": data.get("lastUpdated")}
+
+
+FITNESS_AGE_INVALID_REASONS = [
+    "user_empty_age",
+    "user_under_age",
+    "user_over_age",
+    "user_pregnant",
+]
+
+
+def _fitness_invalid_reason(data: JsonObject) -> StateValue:
+    return _option(
+        data.get("invalidReason"),
+        FITNESS_AGE_INVALID_REASONS,
+        "fitness age invalid reason",
+    )
+
+
+FITNESS_AGE_SENSORS: tuple[MyGarminSensorDescription, ...] = (
+    replace(
+        _fitness_age("fitness_age", "fitnessAge"),
+        attributes_fn=_fitness_age_attributes,
+    ),
+    _fitness_age("achievable_fitness_age", "achievableFitnessAge"),
+    _fitness_age("previous_fitness_age", "previousFitnessAge", enabled=False),
+    MyGarminSensorDescription(
+        key="fitness_age_invalid_reason",
+        translation_key="fitness_age_invalid_reason",
+        device_class=SensorDeviceClass.ENUM,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        options=FITNESS_AGE_INVALID_REASONS,
+        value_fn=_fitness_invalid_reason,
+    ),
+)

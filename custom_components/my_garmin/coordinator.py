@@ -324,6 +324,30 @@ class SyncWatcher:
             self._hass.async_create_task(coordinator.async_request_refresh())
 
 
+# Fitness age moves slowly, with weeks of activity and measurements: a poll every
+# six hours is fresh enough, and a watch sync refreshes it at once.
+FITNESS_AGE_INTERVAL = timedelta(hours=6)
+
+
+class FitnessAgeCoordinator(MyGarminCoordinator):
+    """The fitness age, refreshed every six hours and after each watch sync."""
+
+    def __init__(
+        self,
+        hass: HomeAssistant,
+        entry: ConfigEntry[MyGarminData],
+        client: GarminPersonalClient,
+    ) -> None:
+        super().__init__(
+            hass,
+            entry,
+            client,
+            name="fitness age",
+            update_interval=FITNESS_AGE_INTERVAL,
+            fetch=client.get_fitness_age,
+        )
+
+
 @dataclass
 class MyGarminData:
     """What a loaded config entry keeps in runtime_data."""
@@ -334,4 +358,5 @@ class MyGarminData:
     hrv: HrvCoordinator
     weight: WeightCoordinator
     activities: ActivitiesCoordinator
+    fitness_age: FitnessAgeCoordinator
     spo2: SpO2Coordinator

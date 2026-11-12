@@ -168,6 +168,7 @@ async def test_diagnostics_keep_the_setup_state_and_the_shape_of_measurements(
         "hrv",
         "weight",
         "activities",
+        "fitness_age",
         "spo2",
     }
     daily = coordinators["daily"]
