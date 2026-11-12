@@ -96,5 +96,3 @@ jobs:
           category: integration
           # A PR comment needs write access: the job reads only.
           comment: "false"
-          # No brand icon yet, in the repository or in home-assistant/brands.
-          ignore: brands
