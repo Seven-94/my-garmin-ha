@@ -65,6 +65,9 @@
       },
       "sync_overdue": {
         "name": "Watch sync overdue"
+      },
+      "menstrual_cycle_predicted": {
+        "name": "Predicted menstrual cycle"
       }
     },
     "sensor": {
@@ -624,6 +627,36 @@
       },
       "nutrition_adjusted_fat_goal": {
         "name": "Adjusted fat goal"
+      },
+      "menstrual_cycle_phase": {
+        "name": "Menstrual cycle phase"
+      },
+      "menstrual_cycle_day": {
+        "name": "Day of menstrual cycle"
+      },
+      "menstrual_days_until_next_phase": {
+        "name": "Days until next cycle phase"
+      },
+      "menstrual_phase_length": {
+        "name": "Current cycle phase length"
+      },
+      "menstrual_predicted_cycle_length": {
+        "name": "Predicted cycle length"
+      },
+      "menstrual_period_length": {
+        "name": "Period length"
+      },
+      "menstrual_fertile_window_start": {
+        "name": "Fertile window start day"
+      },
+      "menstrual_fertile_window_length": {
+        "name": "Fertile window length"
+      },
+      "menstrual_luteal_phase_start": {
+        "name": "Luteal phase start day"
+      },
+      "menstrual_pregnancy_week": {
+        "name": "Pregnancy week"
       }
     },
     "event": {

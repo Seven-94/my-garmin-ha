@@ -413,6 +413,36 @@ class NutritionCoordinator(MyGarminCoordinator):
         return {section: log.get(section) for section in NUTRITION_SECTIONS}
 
 
+# The cycle is logged in the app and moves on at midnight: a watch sync does not
+# change it, an hourly poll follows the day.
+MENSTRUAL_CYCLE_INTERVAL = timedelta(hours=1)
+# Under a key the diagnostics exclude by name: the summary's own keys, such as
+# dayInCycle, would not match it.
+MENSTRUAL_CYCLE_KEY = "menstrualCycle"
+
+
+class MenstrualCycleCoordinator(MyGarminCoordinator):
+    """Today's menstrual cycle summary, every hour; empty when none is tracked."""
+
+    def __init__(
+        self,
+        hass: HomeAssistant,
+        entry: ConfigEntry[MyGarminData],
+        client: GarminPersonalClient,
+    ) -> None:
+        super().__init__(
+            hass,
+            entry,
+            client,
+            name="menstrual cycle",
+            update_interval=MENSTRUAL_CYCLE_INTERVAL,
+            fetch=self._async_fetch_cycle,
+        )
+
+    async def _async_fetch_cycle(self, day: date) -> JsonObject:
+        return {MENSTRUAL_CYCLE_KEY: await self.client.get_menstrual_cycle(day)}
+
+
 def _last_sync(coordinator: DailySummaryCoordinator) -> object:
     return (coordinator.data or {}).get("lastSyncTimestampGMT")
 
@@ -481,3 +511,4 @@ class MyGarminData:
     heart_rate_thresholds: HeartRateThresholdsCoordinator
     hydration: HydrationCoordinator
     nutrition: NutritionCoordinator
+    menstrual_cycle: MenstrualCycleCoordinator

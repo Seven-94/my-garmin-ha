@@ -17,6 +17,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   to the day's activity). Meals, foods and their names are dropped on receipt:
   never in a state, an attribute, a log or the diagnostics. Calories consumed
   stay on the daily summary.
+- Menstrual cycle sensors, disabled by default: phase (as Garmin numbers it),
+  day of cycle with the cycle dates, days until the next phase, phase, cycle,
+  period and fertile window lengths, fertile window and luteal phase start
+  days, pregnancy week during a pregnancy, and a predicted cycle binary
+  sensor. Refreshed every hour. The day view (symptoms, flow, mood) is never
+  requested, and the diagnostics drop the whole cycle.
 
 ### Fixed
 

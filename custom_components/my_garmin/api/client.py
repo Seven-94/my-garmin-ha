@@ -178,6 +178,16 @@ class GarminPersonalClient:
             null_is_empty=True,
         )
 
+    async def get_menstrual_cycle(self, day: date) -> JsonObject:
+        """The menstrual cycle summary as of this day.
+
+        Empty when the user tracks no cycle: Garmin then answers a null body.
+        """
+        return await self._get_object(
+            f"/periodichealth-service/menstrualcycle/summary/{day.isoformat()}",
+            null_is_empty=True,
+        )
+
     async def get_hydration(self, start: date, end: date) -> list[JsonObject]:
         """Daily hydration between two days (31 at most), in millilitres."""
         path = (

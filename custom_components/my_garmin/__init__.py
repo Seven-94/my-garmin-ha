@@ -15,6 +15,7 @@ from .coordinator import (
     HeartRateZonesCoordinator,
     HrvCoordinator,
     HydrationCoordinator,
+    MenstrualCycleCoordinator,
     MyGarminData,
     NutritionCoordinator,
     SleepCoordinator,
@@ -73,6 +74,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: MyGarminConfigEntry) -> 
     await hydration.async_refresh()
     nutrition = NutritionCoordinator(hass, entry, client)
     await nutrition.async_refresh()
+    menstrual_cycle = MenstrualCycleCoordinator(hass, entry, client)
+    await menstrual_cycle.async_refresh()
 
     entry.runtime_data = MyGarminData(
         client=client,
@@ -87,6 +90,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: MyGarminConfigEntry) -> 
         heart_rate_thresholds=heart_rate_thresholds,
         hydration=hydration,
         nutrition=nutrition,
+        menstrual_cycle=menstrual_cycle,
     )
     dependents = [sleep, hrv, weight, activities, fitness_age, spo2, hydration]
     watcher = SyncWatcher(hass, daily, [*dependents, nutrition])
