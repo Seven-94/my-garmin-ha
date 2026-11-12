@@ -1,0 +1,34 @@
+{
+  "uuid": "00000000-0000-0000-0000-000000000003",
+  "userProfilePk": 10000001,
+  "calendarDate": "2026-11-08",
+  "source": "garmin",
+  "includesWellnessData": true,
+  "includesActivityData": true,
+  "wellnessChronology": {
+    "startTimestampGmt": "2026-11-07T23:00:00.0",
+    "startTimestampLocal": "2026-11-08T00:00:00.0",
+    "endTimestampGmt": "2026-11-08T23:00:00.0",
+    "endTimestampLocal": "2026-11-09T00:00:00.0",
+    "totalDurationInMillis": 86400000
+  },
+  "movement": {
+    "steps": {"goal": 8000, "value": 9000, "distanceInMeters": 7200.0},
+    "floorsAscended": {"goal": 10, "value": 12, "distanceInMeters": 36.0},
+    "floorsDescended": {"value": 11, "distanceInMeters": 33.0}
+  },
+  "calories": {"burnedResting": 1700, "burnedActive": 500, "burnedTotal": 2200},
+  "heartRate": {"minValue": 48, "maxValue": 150, "restingValue": 55},
+  "intensityMinutes": {"goal": 150, "moderate": 20, "vigorous": 10},
+  "stress": {"avgLevel": 30, "maxLevel": 80, "qualifier": "balanced"},
+  "bodyBattery": {
+    "minValue": 20,
+    "maxValue": 90,
+    "chargedValue": 60,
+    "drainedValue": 55,
+    "latestValue": 40,
+    "featureVersion": "2.0"
+  },
+  "respiration": {"avgValue": 14, "maxValue": 20, "minValue": 10, "latestValue": 13},
+  "pulseOx": {"avgValue": 96, "minValue": 90, "latestValue": 95}
+}

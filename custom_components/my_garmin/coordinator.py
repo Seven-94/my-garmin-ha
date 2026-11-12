@@ -1,8 +1,9 @@
 """Polling: the daily summary often, the rest after each watch sync."""
 
+import asyncio
 import logging
 from collections.abc import Awaitable, Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date, timedelta
 from typing import TYPE_CHECKING
 
@@ -608,3 +609,5 @@ class MyGarminData:
     menstrual_cycle: MenstrualCycleCoordinator
     body_battery_events: BodyBatteryEventsCoordinator
     wellness_activities: WellnessActivitiesCoordinator
+    # Held while the statistics backfill service runs for this account.
+    backfill_lock: asyncio.Lock = field(default_factory=asyncio.Lock)

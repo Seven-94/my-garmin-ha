@@ -1,6 +1,9 @@
 {
   "domain": "my_garmin",
   "name": "My Garmin",
+  "after_dependencies": [
+    "recorder"
+  ],
   "codeowners": [
     "@Seven-94"
   ],

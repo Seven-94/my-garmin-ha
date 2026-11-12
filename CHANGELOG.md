@@ -33,6 +33,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   metric (heart rate, stress, respiration, SpO2, HRV) and the time in each zone
   as attributes. Refreshed after each watch sync; the last session stays shown
   until the next one. Session names and notes are never read.
+- `my_garmin.backfill_statistics` action: imports up to three years of daily
+  history (365 days by default) into long-term statistics through the
+  recorder's external statistics: steps, distance, floors, calories, intensity
+  minutes, Body Battery charged and drained as cumulative totals; resting heart
+  rate, stress, respiration, SpO2, sleep duration and score as daily readings.
+  31 days per request with a pause in between, one run at a time per account;
+  a 429 stops the run after importing what was fetched.
 
 ### Fixed
 

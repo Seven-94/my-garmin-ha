@@ -607,3 +607,70 @@ async def test_get_wellness_activities_rejects_anything_but_a_list_of_objects(
 
     with pytest.raises(GarminApiError):
         await client.get_wellness_activities(date(2026, 11, 4), date(2026, 11, 10))
+
+
+SUMMARIES_PATH = "/usersummary-service/v2/dailysummaries"
+SLEEP_SUMMARIES_PATH = "/sleep-service/sleep/dailySleepSummariesByDate"
+RANGE_QUERY = {"startDate": "2026-10-01", "endDate": "2026-10-31"}
+
+
+async def test_get_daily_summaries_reads_the_data_list(
+    client: GarminPersonalClient, fake_garmin: FakeGarmin
+) -> None:
+    body = '{"data": [{"calendarDate": "2026-10-01"}]}'
+    fake_garmin.data_replies[SUMMARIES_PATH] = [Reply(body=body)]
+
+    days = await client.get_daily_summaries(date(2026, 10, 1), date(2026, 10, 31))
+
+    assert days == [{"calendarDate": "2026-10-01"}]
+    assert dict(fake_garmin.requests[-1].query) == RANGE_QUERY
+
+
+@pytest.mark.parametrize("body", ["null", "", '{"data": null}'])
+async def test_get_daily_summaries_without_data_returns_an_empty_list(
+    client: GarminPersonalClient, fake_garmin: FakeGarmin, body: str
+) -> None:
+    fake_garmin.data_replies[SUMMARIES_PATH] = [Reply(body=body)]
+
+    assert await client.get_daily_summaries(date(2026, 10, 1), date(2026, 10, 31)) == []
+
+
+@pytest.mark.parametrize("body", ["[]", '{"data": [1]}', '{"data": {}}'])
+async def test_get_daily_summaries_rejects_another_shape(
+    client: GarminPersonalClient, fake_garmin: FakeGarmin, body: str
+) -> None:
+    fake_garmin.data_replies[SUMMARIES_PATH] = [Reply(body=body)]
+
+    with pytest.raises(GarminApiError):
+        await client.get_daily_summaries(date(2026, 10, 1), date(2026, 10, 31))
+
+
+async def test_get_sleep_summaries_returns_the_nights(
+    client: GarminPersonalClient, fake_garmin: FakeGarmin
+) -> None:
+    body = '[{"calendarDate": "2026-10-01", "sleepTimeSeconds": 27000}]'
+    fake_garmin.data_replies[SLEEP_SUMMARIES_PATH] = [Reply(body=body)]
+
+    nights = await client.get_sleep_summaries(date(2026, 10, 1), date(2026, 10, 31))
+
+    assert nights == [{"calendarDate": "2026-10-01", "sleepTimeSeconds": 27000}]
+    assert dict(fake_garmin.requests[-1].query) == RANGE_QUERY
+
+
+@pytest.mark.parametrize("body", ["null", ""])
+async def test_get_sleep_summaries_without_data_returns_an_empty_list(
+    client: GarminPersonalClient, fake_garmin: FakeGarmin, body: str
+) -> None:
+    fake_garmin.data_replies[SLEEP_SUMMARIES_PATH] = [Reply(body=body)]
+
+    assert await client.get_sleep_summaries(date(2026, 10, 1), date(2026, 10, 31)) == []
+
+
+@pytest.mark.parametrize("body", ['{"calendarDate": "x"}', "[1, 2]"])
+async def test_get_sleep_summaries_rejects_anything_but_a_list_of_objects(
+    client: GarminPersonalClient, fake_garmin: FakeGarmin, body: str
+) -> None:
+    fake_garmin.data_replies[SLEEP_SUMMARIES_PATH] = [Reply(body=body)]
+
+    with pytest.raises(GarminApiError):
+        await client.get_sleep_summaries(date(2026, 10, 1), date(2026, 10, 31))
