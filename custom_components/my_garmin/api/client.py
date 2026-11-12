@@ -5,7 +5,7 @@ import time
 from collections.abc import Callable, Mapping
 from datetime import date
 from http import HTTPStatus
-from typing import Any
+from typing import Any, TypeGuard
 
 import aiohttp
 
@@ -21,6 +21,10 @@ type JsonObject = dict[str, Any]
 def _last_updated(entry: JsonObject) -> str:
     # The timestamps share one ISO 8601 format, so text order is time order.
     return str(entry.get("lastUpdated") or "")
+
+
+def _objects(payload: object) -> TypeGuard[list[JsonObject]]:
+    return isinstance(payload, list) and all(isinstance(item, dict) for item in payload)
 
 
 class _TokenRejectedError(Exception):
@@ -218,6 +222,39 @@ class GarminPersonalClient:
         if not isinstance(payload, list) or not all(
             isinstance(item, dict) for item in payload
         ):
+            raise GarminApiError(
+                HTTPStatus.OK, f"Expected a list of objects from {path}"
+            )
+        return payload
+
+    async def get_daily_summaries(self, start: date, end: date) -> list[JsonObject]:
+        """Daily summaries between two days, for the statistics backfill."""
+        path = "/usersummary-service/v2/dailysummaries"
+        payload = await self.get(
+            path, {"startDate": start.isoformat(), "endDate": end.isoformat()}
+        )
+        if payload is None:
+            return []
+        if not isinstance(payload, dict):
+            raise GarminApiError(HTTPStatus.OK, f"Expected a JSON object from {path}")
+        days = payload.get("data")
+        if days is None:
+            return []
+        if not _objects(days):
+            raise GarminApiError(
+                HTTPStatus.OK, f"Expected a list of objects in 'data' from {path}"
+            )
+        return days
+
+    async def get_sleep_summaries(self, start: date, end: date) -> list[JsonObject]:
+        """Nightly sleep summaries between two days (31 at most), by wake-up day."""
+        path = "/sleep-service/sleep/dailySleepSummariesByDate"
+        payload = await self.get(
+            path, {"startDate": start.isoformat(), "endDate": end.isoformat()}
+        )
+        if payload is None:
+            return []
+        if not _objects(payload):
             raise GarminApiError(
                 HTTPStatus.OK, f"Expected a list of objects from {path}"
             )

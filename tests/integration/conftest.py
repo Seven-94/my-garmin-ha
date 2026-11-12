@@ -55,6 +55,9 @@ def mock_client() -> Iterator[MagicMock]:
     client.get_body_battery_reports = AsyncMock(return_value=[])
     # No health monitoring session: Garmin's null body or empty list.
     client.get_wellness_activities = AsyncMock(return_value=[])
+    # Backfill sources: nothing unless a test says otherwise.
+    client.get_daily_summaries = AsyncMock(return_value=[])
+    client.get_sleep_summaries = AsyncMock(return_value=[])
     with (
         patch(
             "custom_components.my_garmin.config_flow.GarminPersonalClient",

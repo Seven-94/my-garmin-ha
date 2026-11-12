@@ -1,0 +1,14 @@
+{
+  "id": 1,
+  "userProfilePK": 10000001,
+  "calendarDate": "2026-11-08",
+  "sleepTimeSeconds": 27000,
+  "napTimeSeconds": 0,
+  "sleepStartTimestampGMT": 1762554600000,
+  "sleepEndTimestampGMT": 1762583400000,
+  "deepSleepSeconds": 6000,
+  "lightSleepSeconds": 15000,
+  "remSleepSeconds": 6000,
+  "awakeSleepSeconds": 900,
+  "sleepScores": {"overall": {"value": 82, "qualifierKey": "GOOD"}}
+}

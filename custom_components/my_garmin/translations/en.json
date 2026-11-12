@@ -715,5 +715,35 @@
         }
       }
     }
+  },
+  "services": {
+    "backfill_statistics": {
+      "name": "Backfill statistics",
+      "description": "Imports daily history from Garmin Connect into long-term statistics: steps, distance, floors, calories, intensity minutes, Body Battery, resting heart rate, stress, respiration, SpO2 and sleep. Days are requested 31 at a time, with a pause in between.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Garmin account",
+          "description": "The account to backfill. Optional when there is only one."
+        },
+        "days": {
+          "name": "Days",
+          "description": "How many complete days to import, up to yesterday (at most 1095)."
+        }
+      }
+    }
+  },
+  "exceptions": {
+    "entry_not_loaded": {
+      "message": "No loaded My Garmin account matches this request."
+    },
+    "recorder_unavailable": {
+      "message": "The recorder is not running: long-term statistics cannot be written."
+    },
+    "already_running": {
+      "message": "A statistics backfill is already running for this account."
+    },
+    "rate_limited": {
+      "message": "Garmin asked to slow down. {days} days were imported; run the backfill again later for the rest."
+    }
   }
 }

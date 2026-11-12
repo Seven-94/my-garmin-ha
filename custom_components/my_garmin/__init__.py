@@ -3,7 +3,9 @@
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_API_KEY, Platform
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from homeassistant.helpers.typing import ConfigType
 
 from .api import GarminPersonalClient
 from .const import DOMAIN
@@ -27,11 +29,14 @@ from .coordinator import (
     WellnessActivitiesCoordinator,
 )
 from .key_expiry import async_remove_key_expiry_issue, async_track_key_expiry
+from .services import async_setup_services
 
 __all__ = [
+    "CONFIG_SCHEMA",
     "DOMAIN",
     "MyGarminConfigEntry",
     "async_remove_entry",
+    "async_setup",
     "async_setup_entry",
     "async_unload_entry",
 ]
@@ -39,6 +44,16 @@ __all__ = [
 PLATFORMS = [Platform.BINARY_SENSOR, Platform.EVENT, Platform.SENSOR]
 
 type MyGarminConfigEntry = ConfigEntry[MyGarminData]
+
+# Set up from the UI only; nothing to read in configuration.yaml.
+CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
+
+
+async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+    """Register the services once, whatever the number of entries."""
+    del config
+    async_setup_services(hass)
+    return True
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: MyGarminConfigEntry) -> bool:

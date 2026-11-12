@@ -43,6 +43,27 @@ HACS installs the `my_garmin.zip` file attached to each
    the folder that holds `configuration.yaml`.
 3. Restart Home Assistant, then add the integration as in step 5 above.
 
+## Backfilling statistics
+
+Home Assistant starts recording when the integration is installed. The
+`my_garmin.backfill_statistics` action imports past days from Garmin Connect
+into long-term statistics, which the Statistics graph card can show:
+
+```yaml
+action: my_garmin.backfill_statistics
+data:
+  days: 365 # complete days up to yesterday, 1095 at most
+```
+
+It imports one value per day as external statistics named
+`my_garmin:<profile>_<key>`: totals (steps, distance, floors, active and total
+calories, intensity minutes, Body Battery charged and drained) and daily
+readings (resting heart rate, stress, respiration, SpO2, sleep duration and
+score). Garmin is asked for 31 days at a time, with a pause between requests;
+a year takes about a minute. If Garmin asks to slow down, the days already
+fetched are kept and the action can be run again later. Running it again is
+safe: the same days are replaced, not added twice.
+
 ## Development
 
 Requirements: [uv](https://docs.astral.sh/uv/) 0.12.x.

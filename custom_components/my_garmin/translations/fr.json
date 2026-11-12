@@ -715,5 +715,35 @@
         }
       }
     }
+  },
+  "services": {
+    "backfill_statistics": {
+      "name": "Remplir les statistiques",
+      "description": "Importe l'historique quotidien de Garmin Connect dans les statistiques à long terme : pas, distance, étages, calories, minutes d'intensité, Body Battery, fréquence cardiaque au repos, stress, respiration, SpO2 et sommeil. Les jours sont demandés par 31, avec une pause entre deux requêtes.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Compte Garmin",
+          "description": "Le compte à remplir. Facultatif s'il n'y en a qu'un."
+        },
+        "days": {
+          "name": "Jours",
+          "description": "Nombre de jours complets à importer, jusqu'à hier (1095 au plus)."
+        }
+      }
+    }
+  },
+  "exceptions": {
+    "entry_not_loaded": {
+      "message": "Aucun compte My Garmin chargé ne correspond à cette demande."
+    },
+    "recorder_unavailable": {
+      "message": "L'enregistreur (recorder) ne tourne pas : impossible d'écrire les statistiques à long terme."
+    },
+    "already_running": {
+      "message": "Un remplissage des statistiques est déjà en cours pour ce compte."
+    },
+    "rate_limited": {
+      "message": "Garmin demande de ralentir. {days} jours ont été importés ; relancez le remplissage plus tard pour le reste."
+    }
   }
 }
