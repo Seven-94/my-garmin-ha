@@ -57,7 +57,9 @@ STRESS_CATEGORIES = [
 ]
 BREATHING_DISRUPTIONS = ["none", "low", "medium", "high"]
 HRV_STATUSES = ["none", "poor", "low", "unbalanced", "balanced"]
-_NO_DATA = {"invalid", "unmeasurable"}
+# Garmin's own words for "no value" (the daily stress qualifier is "UNKNOWN"
+# when the day has too few readings), not values missing from our options.
+_NO_DATA = {"invalid", "unmeasurable", "unknown"}
 # Unknown values are logged once per run, not at every refresh.
 _REPORTED_VALUES: set[tuple[str, str]] = set()
 
