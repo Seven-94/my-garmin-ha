@@ -2,7 +2,8 @@
 
 Home Assistant custom integration for the official Garmin Connect Personal API.
 
-> **Status: in development.** No release is published yet.
+> **Status: early release (0.x).** Entities and options may still change
+> before 1.0.
 
 ## Principles
 
