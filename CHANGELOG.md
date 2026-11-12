@@ -79,6 +79,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Abnormal heart rate alert thresholds (high and low), diagnostic sensors
   refreshed every six hours. An alert that is off, or a day without data, shows
   unknown.
+- `hacs.json`, and CI jobs that validate the integration with hassfest and
+  the HACS action (brand check skipped until the integration has an icon).
 
 ### Changed
 

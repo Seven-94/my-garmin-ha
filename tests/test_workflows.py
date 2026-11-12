@@ -1,3 +1,5 @@
+import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -41,3 +43,37 @@ def test_no_dangerous_triggers() -> None:
         triggers = _load(workflow)[True]
         assert "pull_request_target" not in triggers, workflow.name
         assert "workflow_run" not in triggers, workflow.name
+
+
+def _uses(workflow: Path) -> list[str]:
+    return [
+        str(step["uses"])
+        for job in _load(workflow)["jobs"].values()
+        for step in job.get("steps", [])
+        if "uses" in step
+    ]
+
+
+def test_actions_are_pinned_by_commit_sha() -> None:
+    for workflow in sorted((ROOT / ".github" / "workflows").glob("*.yml")):
+        for action in _uses(workflow):
+            ref = action.rpartition("@")[2]
+            assert re.fullmatch(r"[0-9a-f]{40}", ref), (workflow.name, action)
+
+
+def test_ci_validates_with_hassfest_and_hacs() -> None:
+    actions = _uses(CI_WORKFLOW)
+    assert any(a.startswith("home-assistant/actions/hassfest@") for a in actions)
+    assert any(a.startswith("hacs/action@") for a in actions)
+
+
+def test_every_job_reads_only() -> None:
+    for workflow in sorted((ROOT / ".github" / "workflows").glob("*.yml")):
+        for name, job in _load(workflow)["jobs"].items():
+            assert job["permissions"] == {"contents": "read"}, (workflow.name, name)
+
+
+def test_hacs_manifest_names_the_integration() -> None:
+    manifest = json.loads((ROOT / "hacs.json").read_text(encoding="utf-8"))
+    assert manifest["name"] == "My Garmin"
+    assert "homeassistant" in manifest
