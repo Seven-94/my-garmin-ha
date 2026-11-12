@@ -1001,6 +1001,125 @@ ACTIVITY_SENSORS: tuple[MyGarminSensorDescription, ...] = (
 )
 
 
+ZONE_TRAINING_METHODS = ["hr_max", "lactate_threshold", "hr_reserve", "custom"]
+# Attribute name of each zone field, as shown for every sport.
+_ZONE_FIELDS = {
+    "max_heart_rate": "maxHeartRateUsed",
+    "lactate_threshold_heart_rate": "lactateThresholdHeartRateUsed",
+    "resting_heart_rate": "restingHeartRateUsed",
+    "zone_1_floor": "zone1Floor",
+    "zone_2_floor": "zone2Floor",
+    "zone_3_floor": "zone3Floor",
+    "zone_4_floor": "zone4Floor",
+    "zone_5_floor": "zone5Floor",
+}
+
+
+def _zone_sports(data: JsonObject) -> list[JsonObject]:
+    zones = data.get("zones")
+    if not isinstance(zones, list):
+        return []
+    return [sport for sport in zones if isinstance(sport, dict)]
+
+
+def _default_zones(data: JsonObject) -> JsonObject:
+    """The DEFAULT sport's zones, or the first sport's when Garmin sends none."""
+    sports = _zone_sports(data)
+    first = next(iter(sports), {})
+    return next((s for s in sports if s.get("sport") == "DEFAULT"), first)
+
+
+def _other_zones(data: JsonObject) -> list[JsonObject]:
+    default = _default_zones(data)
+    return [sport for sport in _zone_sports(data) if sport is not default]
+
+
+def _zone_summary(sport: JsonObject) -> dict[str, Any]:
+    return {
+        "sport": _code(sport.get("sport")),
+        "training_method": _code(sport.get("trainingMethod")),
+        **{
+            name: _measure(field, zero_is_missing=True)(sport)
+            for name, field in _ZONE_FIELDS.items()
+        },
+    }
+
+
+def _zone_attributes(data: JsonObject) -> dict[str, Any]:
+    """The sport the values belong to, and the zones of every other sport."""
+    return {
+        "sport": _code(_default_zones(data).get("sport")),
+        "other_sports": [_zone_summary(sport) for sport in _other_zones(data)],
+    }
+
+
+def _resting_zone_attributes(data: JsonObject) -> dict[str, Any]:
+    auto_update = _default_zones(data).get("restingHrAutoUpdateUsed")
+    return {
+        **_zone_attributes(data),
+        "resting_heart_rate_auto_update": (
+            auto_update if isinstance(auto_update, bool) else None
+        ),
+    }
+
+
+def _zone_training_method(data: JsonObject) -> StateValue:
+    # An empty string is no answer either: only a value Garmin invents is logged.
+    method = _default_zones(data).get("trainingMethod")
+    return _option(method or None, ZONE_TRAINING_METHODS, "heart rate zones method")
+
+
+def _zone_setting(
+    key: str,
+    field: str,
+    *,
+    enabled: bool = True,
+    attributes_fn: Callable[[JsonObject], dict[str, Any]] = _zone_attributes,
+) -> MyGarminSensorDescription:
+    """A heart rate zone of the default sport, in bpm: a setting, not a measurement."""
+    read = _measure(field, zero_is_missing=True)
+    return MyGarminSensorDescription(
+        key=key,
+        translation_key=key,
+        native_unit_of_measurement=UNIT_BPM,
+        state_class=None,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        entity_registry_enabled_default=enabled,
+        value_fn=lambda data: read(_default_zones(data)),
+        attributes_fn=attributes_fn,
+    )
+
+
+HEART_RATE_ZONE_SENSORS: tuple[MyGarminSensorDescription, ...] = (
+    _zone_setting("zones_max_heart_rate", "maxHeartRateUsed"),
+    _zone_setting(
+        "zones_lactate_threshold_heart_rate",
+        "lactateThresholdHeartRateUsed",
+        enabled=False,
+    ),
+    _zone_setting(
+        "zones_resting_heart_rate",
+        "restingHeartRateUsed",
+        attributes_fn=_resting_zone_attributes,
+    ),
+    _zone_setting("zones_zone_1_floor", "zone1Floor"),
+    _zone_setting("zones_zone_2_floor", "zone2Floor"),
+    _zone_setting("zones_zone_3_floor", "zone3Floor"),
+    _zone_setting("zones_zone_4_floor", "zone4Floor"),
+    _zone_setting("zones_zone_5_floor", "zone5Floor"),
+    MyGarminSensorDescription(
+        key="zones_training_method",
+        translation_key="zones_training_method",
+        device_class=SensorDeviceClass.ENUM,
+        options=ZONE_TRAINING_METHODS,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        entity_registry_enabled_default=False,
+        value_fn=_zone_training_method,
+        attributes_fn=_zone_attributes,
+    ),
+)
+
+
 KEY_EXPIRY_SENSOR = SensorEntityDescription(
     key="key_expiry",
     translation_key="key_expiry",
@@ -1089,6 +1208,10 @@ async def async_setup_entry(
             *(
                 MyGarminSensor(data.fitness_age, description)
                 for description in FITNESS_AGE_SENSORS
+            ),
+            *(
+                MyGarminSensor(data.heart_rate_zones, description)
+                for description in HEART_RATE_ZONE_SENSORS
             ),
             MyGarminKeyExpirySensor(data.daily, KEY_EXPIRY_SENSOR),
             *(MyGarminSensor(data.spo2, description) for description in SPO2_SENSORS),

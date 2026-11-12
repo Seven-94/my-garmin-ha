@@ -11,6 +11,7 @@ from .coordinator import (
     ActivitiesCoordinator,
     DailySummaryCoordinator,
     FitnessAgeCoordinator,
+    HeartRateZonesCoordinator,
     HrvCoordinator,
     MyGarminData,
     SleepCoordinator,
@@ -47,8 +48,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: MyGarminConfigEntry) -> 
     )
     daily = DailySummaryCoordinator(hass, entry, client)
     await daily.async_config_entry_first_refresh()
-    # Sleep, HRV, weight, activities, fitness age and SpO2 must not hold the
-    # set-up back: their sensors stay unavailable until a later refresh succeeds.
+    # Sleep, HRV, weight, activities, fitness age and SpO2 must not hold the set-up
+    # back: their sensors stay unavailable until a later refresh succeeds.
     sleep = SleepCoordinator(hass, entry, client)
     await sleep.async_refresh()
     hrv = HrvCoordinator(hass, entry, client)
@@ -59,6 +60,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: MyGarminConfigEntry) -> 
     await activities.async_refresh()
     fitness_age = FitnessAgeCoordinator(hass, entry, client)
     await fitness_age.async_refresh()
+    heart_rate_zones = HeartRateZonesCoordinator(hass, entry, client)
+    await heart_rate_zones.async_refresh()
     spo2 = SpO2Coordinator(hass, entry, client)
     await spo2.async_refresh()
 
@@ -70,6 +73,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: MyGarminConfigEntry) -> 
         weight=weight,
         activities=activities,
         fitness_age=fitness_age,
+        heart_rate_zones=heart_rate_zones,
         spo2=spo2,
     )
     watcher = SyncWatcher(

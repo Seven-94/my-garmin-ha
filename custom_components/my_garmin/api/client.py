@@ -142,6 +142,20 @@ class GarminPersonalClient:
             )
         return max(payload, key=_last_updated, default={})
 
+    async def get_heart_rate_zones(self) -> list[JsonObject]:
+        """Heart rate zones of each sport, with Garmin's defaults when none are set."""
+        path = "/biometric-service/heartRateZones/v2"
+        payload = await self.get(path)
+        if payload is None:
+            return []
+        if not isinstance(payload, list) or not all(
+            isinstance(item, dict) for item in payload
+        ):
+            raise GarminApiError(
+                HTTPStatus.OK, f"Expected a list of objects from {path}"
+            )
+        return payload
+
     async def _get_object(
         self,
         path: str,
