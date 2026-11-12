@@ -58,6 +58,8 @@ def mock_client() -> Iterator[MagicMock]:
     # Backfill sources: nothing unless a test says otherwise.
     client.get_daily_summaries = AsyncMock(return_value=[])
     client.get_sleep_summaries = AsyncMock(return_value=[])
+    client.get_activity_file = AsyncMock(return_value=b"")
+    client.get_activity_workouts = AsyncMock(return_value=[])
     with (
         patch(
             "custom_components.my_garmin.config_flow.GarminPersonalClient",

@@ -40,6 +40,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   rate, stress, respiration, SpO2, sleep duration and score as daily readings.
   31 days per request with a pause in between, one run at a time per account;
   a 429 stops the run after importing what was fetched.
+- `my_garmin.download_activity_file` action: saves an activity's original file
+  (ZIP or FIT, checked by its signature, 50 MB at most) to
+  `<media>/my_garmin/activity_<id>.zip`; the name comes from the numeric ID
+  only, and the folder must be allowed by Home Assistant.
+- `my_garmin.get_activity_workouts` action: returns the workouts performed
+  during an activity as response data.
 
 ### Fixed
 

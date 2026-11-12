@@ -64,6 +64,24 @@ a year takes about a minute. If Garmin asks to slow down, the days already
 fetched are kept and the action can be run again later. Running it again is
 safe: the same days are replaced, not added twice.
 
+## Activity files and workouts
+
+Two actions take an activity ID, the `activity_id` attribute of the latest
+activity sensor:
+
+- `my_garmin.download_activity_file` saves the original file of the activity,
+  as recorded by the device (a ZIP holding the FIT file), to
+  `<media>/my_garmin/activity_<id>.zip`, in Home Assistant's local media
+  folder. The file name comes from the ID alone.
+- `my_garmin.get_activity_workouts` returns the workouts performed during the
+  activity as response data.
+
+```yaml
+action: my_garmin.download_activity_file
+data:
+  activity_id: "{{ state_attr('sensor.my_garmin_last_activity', 'activity_id') }}"
+```
+
 ## Development
 
 Requirements: [uv](https://docs.astral.sh/uv/) 0.12.x.

@@ -2,7 +2,7 @@
 
 import logging
 import time
-from collections.abc import Callable, Mapping
+from collections.abc import Awaitable, Callable, Mapping
 from datetime import date
 from http import HTTPStatus
 from typing import Any, TypeGuard
@@ -16,6 +16,11 @@ from .exceptions import GarminApiError, GarminAuthError, GarminConnectionError
 _LOGGER = logging.getLogger(__name__)
 
 type JsonObject = dict[str, Any]
+
+# An activity's original file is a few megabytes at most: a bound keeps a wrong
+# answer from filling the memory.
+MAX_FILE_BYTES = 50 * 1024 * 1024
+_CHUNK_BYTES = 64 * 1024
 
 
 def _last_updated(entry: JsonObject) -> str:
@@ -291,14 +296,47 @@ class GarminPersonalClient:
             raise GarminApiError(HTTPStatus.OK, f"Expected a JSON object from {path}")
         return payload
 
+    async def get_activity_file(self, activity_id: int) -> bytes:
+        """The original file of an activity: a ZIP holding the FIT, as recorded."""
+        return await self._request(
+            f"/download-service/files/activity/{activity_id}",
+            None,
+            accept="*/*",
+            read=_read_file,
+        )
+
+    async def get_activity_workouts(self, activity_id: int) -> list[JsonObject]:
+        """The workouts performed during an activity; [] when there is none."""
+        path = f"/activity-service/activity/{activity_id}/workouts"
+        payload = await self.get(path)
+        if payload is None:
+            return []
+        if not _objects(payload):
+            raise GarminApiError(
+                HTTPStatus.OK, f"Expected a list of objects from {path}"
+            )
+        return payload
+
     async def get(self, path: str, params: Mapping[str, str] | None = None) -> object:
         """GET any endpoint and return the decoded JSON, whatever its shape.
 
         For endpoints without a dedicated method, such as the fixture capture.
         """
+        return await self._request(
+            path, params, accept="application/json", read=_read_json
+        )
+
+    async def _request[T](
+        self,
+        path: str,
+        params: Mapping[str, str] | None,
+        *,
+        accept: str,
+        read: Callable[[aiohttp.ClientResponse, str], Awaitable[T]],
+    ) -> T:
         token = await self._auth.async_get_token()
         try:
-            return await self._get_with_token(path, params, token)
+            return await self._get_with_token(path, params, token, accept, read)
         except _TokenRejectedError:
             # Garmin revokes tokens when the key is deleted or replaced: one new
             # exchange tells a revoked token apart from a dead key.
@@ -307,16 +345,21 @@ class GarminPersonalClient:
 
         token = await self._auth.async_get_token()
         try:
-            return await self._get_with_token(path, params, token)
+            return await self._get_with_token(path, params, token, accept, read)
         except _TokenRejectedError:
             raise GarminAuthError(
                 "Garmin rejected a freshly issued token: the API key is unusable"
             ) from None
 
-    async def _get_with_token(
-        self, path: str, params: Mapping[str, str] | None, token: str
-    ) -> object:
-        headers = {"Authorization": f"Bearer {token}", "Accept": "application/json"}
+    async def _get_with_token[T](
+        self,
+        path: str,
+        params: Mapping[str, str] | None,
+        token: str,
+        accept: str,
+        read: Callable[[aiohttp.ClientResponse, str], Awaitable[T]],
+    ) -> T:
+        headers = {"Authorization": f"Bearer {token}", "Accept": accept}
         try:
             async with self._session.get(
                 f"{self._base_url}{path}",
@@ -327,11 +370,25 @@ class GarminPersonalClient:
                 if response.status == HTTPStatus.UNAUTHORIZED:
                     raise _TokenRejectedError
                 raise_for_error(response)
-                try:
-                    return await response.json(content_type=None)
-                except ValueError:
-                    raise GarminApiError(
-                        response.status, f"Invalid JSON from {path}"
-                    ) from None
+                return await read(response, path)
         except (aiohttp.ClientError, TimeoutError) as err:
             raise GarminConnectionError(f"Cannot reach Garmin for {path}") from err
+
+
+async def _read_json(response: aiohttp.ClientResponse, path: str) -> object:
+    try:
+        return await response.json(content_type=None)
+    except ValueError:
+        raise GarminApiError(response.status, f"Invalid JSON from {path}") from None
+
+
+async def _read_file(response: aiohttp.ClientResponse, path: str) -> bytes:
+    content = bytearray()
+    async for chunk in response.content.iter_chunked(_CHUNK_BYTES):
+        content.extend(chunk)
+        if len(content) > MAX_FILE_BYTES:
+            raise GarminApiError(
+                response.status,
+                f"File from {path} is larger than {MAX_FILE_BYTES} bytes",
+            )
+    return bytes(content)

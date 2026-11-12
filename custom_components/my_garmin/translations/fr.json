@@ -730,6 +730,34 @@
           "description": "Nombre de jours complets à importer, jusqu'à hier (1095 au plus)."
         }
       }
+    },
+    "download_activity_file": {
+      "name": "Télécharger le fichier d'une activité",
+      "description": "Enregistre le fichier d'origine d'une activité, tel qu'enregistré par l'appareil (un ZIP contenant le fichier FIT), dans le dossier my_garmin du dossier média local.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Compte Garmin",
+          "description": "Le compte à utiliser. Facultatif s'il n'y en a qu'un."
+        },
+        "activity_id": {
+          "name": "ID de l'activité",
+          "description": "Le numéro de l'activité Garmin Connect, tel que dans son adresse web (c'est aussi un attribut du capteur de dernière activité)."
+        }
+      }
+    },
+    "get_activity_workouts": {
+      "name": "Obtenir les entraînements d'une activité",
+      "description": "Renvoie les entraînements effectués pendant une activité, comme données de réponse.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Compte Garmin",
+          "description": "Le compte à utiliser. Facultatif s'il n'y en a qu'un."
+        },
+        "activity_id": {
+          "name": "ID de l'activité",
+          "description": "Le numéro de l'activité Garmin Connect, tel que dans son adresse web (c'est aussi un attribut du capteur de dernière activité)."
+        }
+      }
     }
   },
   "exceptions": {
@@ -744,6 +772,27 @@
     },
     "rate_limited": {
       "message": "Garmin demande de ralentir. {days} jours ont été importés ; relancez le remplissage plus tard pour le reste."
+    },
+    "activity_not_found": {
+      "message": "Garmin n'a aucune activité avec cet ID pour ce compte."
+    },
+    "garmin_error": {
+      "message": "Garmin a répondu par une erreur. Réessayez plus tard."
+    },
+    "rate_limited_retry": {
+      "message": "Garmin demande de ralentir. Réessayez plus tard."
+    },
+    "cannot_connect": {
+      "message": "Impossible de joindre Garmin Connect."
+    },
+    "auth_failed": {
+      "message": "Garmin a refusé la clé API. Réauthentifiez l'intégration."
+    },
+    "media_unavailable": {
+      "message": "Le dossier média local n'est pas configuré ou pas autorisé : le fichier ne peut pas être enregistré."
+    },
+    "unexpected_file": {
+      "message": "Garmin n'a envoyé ni ZIP ni fichier FIT : rien n'a été enregistré."
     }
   }
 }
