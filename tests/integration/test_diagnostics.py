@@ -162,7 +162,14 @@ async def test_diagnostics_keep_the_setup_state_and_the_shape_of_measurements(
         "unique_id": REDACTED,
     }
     coordinators = result["coordinators"]
-    assert set(coordinators) == {"daily", "sleep", "hrv", "weight", "activities"}
+    assert set(coordinators) == {
+        "daily",
+        "sleep",
+        "hrv",
+        "weight",
+        "activities",
+        "fitness_age",
+    }
     daily = coordinators["daily"]
     assert daily["name"] == f"{DOMAIN} daily summary"
     assert daily["last_update_success"] is True
