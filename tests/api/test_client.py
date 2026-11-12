@@ -440,3 +440,39 @@ async def test_get_daily_heart_rate_rejects_a_payload_that_is_not_an_object(
 
     with pytest.raises(GarminApiError):
         await client.get_daily_heart_rate(date(2026, 11, 10))
+
+
+HYDRATION_PATH = "/usersummary-service/stats/hydration/daily/2026-11-10/2026-11-10"
+
+
+async def test_get_hydration_returns_the_days(
+    client: GarminPersonalClient, fake_garmin: FakeGarmin
+) -> None:
+    body = '[{"calendarDate": "2026-11-10", "valueInML": 1500.0}]'
+    fake_garmin.data_replies[HYDRATION_PATH] = [Reply(body=body)]
+
+    day = date(2026, 11, 10)
+    assert await client.get_hydration(day, day) == [
+        {"calendarDate": "2026-11-10", "valueInML": 1500.0}
+    ]
+
+
+@pytest.mark.parametrize("body", ["null", ""])
+async def test_get_hydration_without_data_returns_an_empty_list(
+    client: GarminPersonalClient, fake_garmin: FakeGarmin, body: str
+) -> None:
+    fake_garmin.data_replies[HYDRATION_PATH] = [Reply(body=body)]
+
+    day = date(2026, 11, 10)
+    assert await client.get_hydration(day, day) == []
+
+
+@pytest.mark.parametrize("body", ['{"valueInML": 1}', "[1, 2]"])
+async def test_get_hydration_rejects_anything_but_a_list_of_objects(
+    client: GarminPersonalClient, fake_garmin: FakeGarmin, body: str
+) -> None:
+    fake_garmin.data_replies[HYDRATION_PATH] = [Reply(body=body)]
+
+    day = date(2026, 11, 10)
+    with pytest.raises(GarminApiError):
+        await client.get_hydration(day, day)

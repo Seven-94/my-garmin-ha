@@ -585,6 +585,12 @@
       },
       "abnormal_heart_rate_low_threshold": {
         "name": "Seuil de fréquence cardiaque anormalement basse"
+      },
+      "hydration_sweat_loss": {
+        "name": "Perte hydrique par transpiration"
+      },
+      "hydration_activity_intake": {
+        "name": "Hydratation pendant les activités"
       }
     },
     "event": {

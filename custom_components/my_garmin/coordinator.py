@@ -350,6 +350,38 @@ class HeartRateThresholdsCoordinator(MyGarminCoordinator):
         )
 
 
+# Drinks are logged in the app, without a watch sync: an hourly poll shows them
+# the same hour, and a watch sync brings the sweat loss of a new activity.
+HYDRATION_INTERVAL = timedelta(hours=1)
+
+
+class HydrationCoordinator(MyGarminCoordinator):
+    """Today's hydration, refreshed every hour and after each watch sync."""
+
+    def __init__(
+        self,
+        hass: HomeAssistant,
+        entry: ConfigEntry[MyGarminData],
+        client: GarminPersonalClient,
+    ) -> None:
+        super().__init__(
+            hass,
+            entry,
+            client,
+            name="hydration",
+            update_interval=HYDRATION_INTERVAL,
+            fetch=self._async_fetch_hydration,
+        )
+
+    async def _async_fetch_hydration(self, day: date) -> JsonObject:
+        days = await self.client.get_hydration(day, day)
+        # A day starts empty: yesterday's totals must not stay shown.
+        return next(
+            (entry for entry in days if entry.get("calendarDate") == day.isoformat()),
+            {},
+        )
+
+
 def _last_sync(coordinator: DailySummaryCoordinator) -> object:
     return (coordinator.data or {}).get("lastSyncTimestampGMT")
 
@@ -416,3 +448,4 @@ class MyGarminData:
     heart_rate_zones: HeartRateZonesCoordinator
     spo2: SpO2Coordinator
     heart_rate_thresholds: HeartRateThresholdsCoordinator
+    hydration: HydrationCoordinator
