@@ -484,6 +484,22 @@ async def test_unknown_stress_category_is_logged_once(
     assert caplog.text.count("SERENE_TEST_ONLY") == 1
 
 
+async def test_unknown_qualifier_is_no_data_without_a_warning(
+    hass: HomeAssistant,
+    mock_client: MagicMock,
+    summary: dict[str, Any],
+    config_entry: MockConfigEntry,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    summary["stressQualifier"] = "UNKNOWN"
+    mock_client.get_daily_summary.return_value = summary
+
+    await _setup(hass, config_entry)
+
+    assert _state(hass, "stress_category").state == STATE_UNKNOWN
+    assert "Unknown stress category" not in caplog.text
+
+
 async def test_missing_stress_category_is_unknown(
     hass: HomeAssistant,
     mock_client: MagicMock,

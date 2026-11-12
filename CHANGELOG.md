@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- The stress category is unknown, without a warning in the log, when Garmin
+  sends `UNKNOWN` (its own way to say the day has no category).
+
 ## [0.2.0] - 2026-11-12
 
 ### Added
