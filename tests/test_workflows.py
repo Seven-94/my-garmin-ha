@@ -7,6 +7,7 @@ import yaml
 
 ROOT = Path(__file__).resolve().parent.parent
 CI_WORKFLOW = ROOT / ".github" / "workflows" / "ci.yml"
+RELEASE_WORKFLOW = ROOT / ".github" / "workflows" / "release.yml"
 
 
 def _load(path: Path) -> Any:
@@ -67,10 +68,29 @@ def test_ci_validates_with_hassfest_and_hacs() -> None:
     assert any(a.startswith("hacs/action@") for a in actions)
 
 
-def test_every_job_reads_only() -> None:
+# The one job allowed to write: it creates the GitHub release of a tag.
+WRITERS = {("release.yml", "release"): {"contents": "write"}}
+
+
+def test_every_job_reads_only_but_the_release() -> None:
     for workflow in sorted((ROOT / ".github" / "workflows").glob("*.yml")):
         for name, job in _load(workflow)["jobs"].items():
-            assert job["permissions"] == {"contents": "read"}, (workflow.name, name)
+            expected = WRITERS.get((workflow.name, name), {"contents": "read"})
+            assert job["permissions"] == expected, (workflow.name, name)
+
+
+def test_releases_start_from_a_version_tag_only() -> None:
+    triggers = _load(RELEASE_WORKFLOW)[True]
+
+    assert triggers == {"push": {"tags": ["v*"]}}
+
+
+def test_release_job_builds_with_the_tested_script() -> None:
+    steps = _load(RELEASE_WORKFLOW)["jobs"]["release"]["steps"]
+    commands = " ".join(str(step["run"]) for step in steps if "run" in step)
+
+    assert "scripts.release" in commands
+    assert "gh release create" in commands
 
 
 def test_hacs_manifest_names_the_integration() -> None:
