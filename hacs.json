@@ -1,4 +1,6 @@
 {
   "name": "My Garmin",
-  "homeassistant": "2026.10.0"
+  "homeassistant": "2026.11.0",
+  "zip_release": true,
+  "filename": "my_garmin.zip"
 }

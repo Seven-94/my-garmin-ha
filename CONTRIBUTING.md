@@ -31,6 +31,26 @@ uv run prek install
 4. Commit using [Conventional Commits](https://www.conventionalcommits.org/).
 5. Open a pull request and fill in the template.
 
+## Releases
+
+Maintainers publish a release in two steps:
+
+1. In a pull request, set the new `version` in
+   `custom_components/my_garmin/manifest.json` and rename the `[Unreleased]`
+   section of `CHANGELOG.md` to `[X.Y.Z] - YYYY-MM-DD`, with a new empty
+   `[Unreleased]` section above it.
+2. Once it is merged, tag that commit of `main` and push the tag:
+   ```bash
+   git switch main && git pull
+   git tag -s vX.Y.Z -m "vX.Y.Z"
+   git push origin vX.Y.Z
+   ```
+
+The `Release` workflow checks that the tag matches the manifest version, then
+creates the GitHub release with the changelog section as notes and
+`my_garmin.zip`, the file HACS installs. `uv run python -m scripts.release vX.Y.Z`
+runs the same checks locally.
+
 ## Rules
 
 - Tests never call the Garmin API. Fixtures must be anonymised.

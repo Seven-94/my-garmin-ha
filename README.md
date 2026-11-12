@@ -22,7 +22,25 @@ Home Assistant custom integration for the official Garmin Connect Personal API.
 
 ## Installation
 
-Instructions (HACS custom repository) will come with the first release.
+### With HACS (recommended)
+
+1. In Home Assistant, open **HACS**, then the menu (⋮) → **Custom repositories**.
+2. Add `https://github.com/Seven-94/my-garmin-ha` with the type **Integration**.
+3. Search for **My Garmin** in HACS, open it and select **Download**.
+4. Restart Home Assistant.
+5. Go to **Settings** → **Devices & services** → **Add integration**, search for
+   **My Garmin** and enter your personal API key and its expiry date.
+
+HACS installs the `my_garmin.zip` file attached to each
+[GitHub release](https://github.com/Seven-94/my-garmin-ha/releases).
+
+### Manually
+
+1. Download `my_garmin.zip` from the latest
+   [release](https://github.com/Seven-94/my-garmin-ha/releases).
+2. Extract it into `<config>/custom_components/my_garmin/`, where `<config>` is
+   the folder that holds `configuration.yaml`.
+3. Restart Home Assistant, then add the integration as in step 5 above.
 
 ## Development
 

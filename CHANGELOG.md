@@ -83,6 +83,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the HACS action.
 - Integration icon, shipped in `custom_components/my_garmin/brand/` for Home
   Assistant and HACS.
+- Release workflow: pushing a `vX.Y.Z` tag that matches the manifest version
+  publishes a GitHub release with `my_garmin.zip`, installable from HACS, and
+  the changelog section as notes. Installation steps in the README.
 
 ### Changed
 
