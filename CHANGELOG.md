@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-12
+
 ### Added
 
 - Hydration sensors, disabled by default: sweat loss and fluid intake during
@@ -138,5 +140,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - The fixture anonymiser also draws the `_AWAKE` stress categories.
 
-[Unreleased]: https://github.com/Seven-94/my-garmin-ha/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/Seven-94/my-garmin-ha/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/Seven-94/my-garmin-ha/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/Seven-94/my-garmin-ha/releases/tag/v0.1.0
