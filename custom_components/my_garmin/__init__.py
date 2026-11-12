@@ -9,6 +9,7 @@ from .api import GarminPersonalClient
 from .const import DOMAIN
 from .coordinator import (
     ActivitiesCoordinator,
+    BodyBatteryEventsCoordinator,
     DailySummaryCoordinator,
     FitnessAgeCoordinator,
     HeartRateThresholdsCoordinator,
@@ -76,6 +77,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: MyGarminConfigEntry) -> 
     await nutrition.async_refresh()
     menstrual_cycle = MenstrualCycleCoordinator(hass, entry, client)
     await menstrual_cycle.async_refresh()
+    body_battery_events = BodyBatteryEventsCoordinator(hass, entry, client)
+    await body_battery_events.async_refresh()
 
     entry.runtime_data = MyGarminData(
         client=client,
@@ -91,9 +94,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: MyGarminConfigEntry) -> 
         hydration=hydration,
         nutrition=nutrition,
         menstrual_cycle=menstrual_cycle,
+        body_battery_events=body_battery_events,
     )
     dependents = [sleep, hrv, weight, activities, fitness_age, spo2, hydration]
-    watcher = SyncWatcher(hass, daily, [*dependents, nutrition])
+    watcher = SyncWatcher(hass, daily, [*dependents, nutrition, body_battery_events])
     entry.async_on_unload(daily.async_add_listener(watcher))
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True

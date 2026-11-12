@@ -175,6 +175,7 @@ async def test_diagnostics_keep_the_setup_state_and_the_shape_of_measurements(
         "hydration",
         "nutrition",
         "menstrual_cycle",
+        "body_battery_events",
     }
     daily = coordinators["daily"]
     assert daily["name"] == f"{DOMAIN} daily summary"

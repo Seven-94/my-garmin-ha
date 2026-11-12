@@ -534,3 +534,38 @@ async def test_get_menstrual_cycle_rejects_a_payload_that_is_not_an_object(
 
     with pytest.raises(GarminApiError):
         await client.get_menstrual_cycle(date(2026, 11, 10))
+
+
+BODY_BATTERY_PATH = "/wellness-service/wellness/bodyBattery/reports/daily"
+
+
+async def test_get_body_battery_reports_sends_the_days(
+    client: GarminPersonalClient, fake_garmin: FakeGarmin
+) -> None:
+    fake_garmin.data_replies[BODY_BATTERY_PATH] = [Reply(body='[{"date": "x"}]')]
+
+    day = date(2026, 11, 10)
+    assert await client.get_body_battery_reports(day, day) == [{"date": "x"}]
+    request = fake_garmin.requests[-1]
+    assert dict(request.query) == {"startDate": "2026-11-10", "endDate": "2026-11-10"}
+
+
+@pytest.mark.parametrize("body", ["null", ""])
+async def test_get_body_battery_reports_without_data_returns_an_empty_list(
+    client: GarminPersonalClient, fake_garmin: FakeGarmin, body: str
+) -> None:
+    fake_garmin.data_replies[BODY_BATTERY_PATH] = [Reply(body=body)]
+
+    day = date(2026, 11, 10)
+    assert await client.get_body_battery_reports(day, day) == []
+
+
+@pytest.mark.parametrize("body", ['{"date": "x"}', "[1, 2]"])
+async def test_get_body_battery_reports_rejects_anything_but_a_list_of_objects(
+    client: GarminPersonalClient, fake_garmin: FakeGarmin, body: str
+) -> None:
+    fake_garmin.data_replies[BODY_BATTERY_PATH] = [Reply(body=body)]
+
+    day = date(2026, 11, 10)
+    with pytest.raises(GarminApiError):
+        await client.get_body_battery_reports(day, day)
