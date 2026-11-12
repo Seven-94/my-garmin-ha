@@ -379,3 +379,32 @@ async def test_get_fitness_age_rejects_anything_but_an_object_or_a_list_of_objec
 
     with pytest.raises(GarminApiError):
         await client.get_fitness_age(date(2026, 11, 10))
+
+
+SPO2_PATH = "/wellness-service/wellness/daily/spo2acclimation/2026-11-10"
+
+
+async def test_get_spo2_puts_the_date_in_the_path(
+    client: GarminPersonalClient,
+) -> None:
+    spo2 = await client.get_spo2(date(2026, 11, 10))
+
+    assert spo2 == {"path": SPO2_PATH, "query": {}}
+
+
+@pytest.mark.parametrize("body", ["null", ""])
+async def test_get_spo2_without_data_returns_an_empty_object(
+    client: GarminPersonalClient, fake_garmin: FakeGarmin, body: str
+) -> None:
+    fake_garmin.data_replies[SPO2_PATH] = [Reply(body=body)]
+
+    assert await client.get_spo2(date(2026, 11, 10)) == {}
+
+
+async def test_get_spo2_rejects_a_payload_that_is_not_an_object(
+    client: GarminPersonalClient, fake_garmin: FakeGarmin
+) -> None:
+    fake_garmin.data_replies[SPO2_PATH] = [Reply(body="[1, 2]")]
+
+    with pytest.raises(GarminApiError):
+        await client.get_spo2(date(2026, 11, 10))

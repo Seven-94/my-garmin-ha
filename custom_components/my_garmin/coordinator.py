@@ -300,6 +300,32 @@ class HeartRateZonesCoordinator(MyGarminCoordinator):
         return {"zones": await self.client.get_heart_rate_zones()}
 
 
+def has_spo2(data: JsonObject | None) -> bool:
+    """Whether a SpO2 response holds a reading of its day."""
+    return any(
+        _positive((data or {}).get(field)) for field in ("averageSpO2", "latestSpO2")
+    )
+
+
+class SpO2Coordinator(LastNightCoordinator):
+    """The day's SpO2 and acclimation baseline; empty for devices without SpO2."""
+
+    def __init__(
+        self,
+        hass: HomeAssistant,
+        entry: ConfigEntry[MyGarminData],
+        client: GarminPersonalClient,
+    ) -> None:
+        super().__init__(
+            hass,
+            entry,
+            client,
+            name="SpO2",
+            fetch=client.get_spo2,
+            has_data=has_spo2,
+        )
+
+
 def _last_sync(coordinator: DailySummaryCoordinator) -> object:
     return (coordinator.data or {}).get("lastSyncTimestampGMT")
 
@@ -364,3 +390,4 @@ class MyGarminData:
     activities: ActivitiesCoordinator
     fitness_age: FitnessAgeCoordinator
     heart_rate_zones: HeartRateZonesCoordinator
+    spo2: SpO2Coordinator

@@ -1127,6 +1127,63 @@ KEY_EXPIRY_SENSOR = SensorEntityDescription(
     entity_category=EntityCategory.DIAGNOSTIC,
 )
 
+# Attribute name and Garmin field, in UTC: the local times would repeat them.
+SPO2_TIMES = {
+    "window_start": "startTimestampGMT",
+    "window_end": "endTimestampGMT",
+    "measured_at": "latestSpO2TimestampGMT",
+    "sleep_start": "sleepStartTimestampGMT",
+    "sleep_end": "sleepEndTimestampGMT",
+    "tomorrow_sleep_start": "tomorrowSleepStartTimestampGMT",
+    "tomorrow_sleep_end": "tomorrowSleepEndTimestampGMT",
+}
+
+
+def _spo2_attributes(data: JsonObject) -> dict[str, Any]:
+    times = {name: _utc(data.get(field)) for name, field in SPO2_TIMES.items()}
+    return {
+        "day": data.get("calendarDate"),
+        **{name: moment.isoformat() for name, moment in times.items() if moment},
+    }
+
+
+def _spo2(
+    key: str, field: str, *, precision: int = 0, enabled: bool = True
+) -> MyGarminSensorDescription:
+    """A blood oxygen saturation of the day, in percent; 0 means not measured."""
+    return replace(
+        _reading(key, field, PERCENTAGE, precision=precision, enabled=enabled),
+        attributes_fn=_spo2_attributes,
+    )
+
+
+SPO2_SENSORS: tuple[MyGarminSensorDescription, ...] = (
+    # The daily summary already shows the day's average, lowest and latest.
+    _spo2("acclimation_spo2_average", "averageSpO2", precision=1, enabled=False),
+    _spo2("acclimation_spo2_lowest", "lowestSpO2", enabled=False),
+    _spo2("acclimation_spo2_latest", "latestSpO2", enabled=False),
+    _spo2("acclimation_spo2_seven_day_average", "lastSevenDaysAvgSpO2", precision=1),
+    _spo2("acclimation_spo2_sleep_average", "avgSleepSpO2", precision=1),
+    _spo2(
+        "acclimation_spo2_tomorrow_sleep_average",
+        "avgTomorrowSleepSpO2",
+        precision=1,
+        enabled=False,
+    ),
+)
+
+# Daily summary, not SpO2 response: that one has no altitude. Null for most users.
+ALTITUDE_SENSORS: tuple[MyGarminSensorDescription, ...] = (
+    _number(
+        "acclimation_altitude",
+        "averageMonitoringEnvironmentAltitude",
+        UnitOfLength.METERS,
+        device_class=SensorDeviceClass.DISTANCE,
+        signed=True,
+        enabled=False,
+    ),
+)
+
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -1157,6 +1214,11 @@ async def async_setup_entry(
                 for description in HEART_RATE_ZONE_SENSORS
             ),
             MyGarminKeyExpirySensor(data.daily, KEY_EXPIRY_SENSOR),
+            *(MyGarminSensor(data.spo2, description) for description in SPO2_SENSORS),
+            *(
+                MyGarminSensor(data.daily, description)
+                for description in ALTITUDE_SENSORS
+            ),
         ]
     )
 

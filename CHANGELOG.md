@@ -71,6 +71,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   5 and training method, for the DEFAULT sport (the first sport when there is
   none). Lactate threshold and training method are disabled by default; the
   zones of the other sports are attributes.
+- SpO2 and acclimation sensors: seven-day average and average during sleep,
+  refreshed after each watch sync and every two hours. Average, lowest and
+  latest SpO2 (same values as the daily summary), average during tomorrow's
+  sleep and average altitude are disabled by default. Devices without SpO2 get
+  unknown values, without errors.
 
 ### Changed
 

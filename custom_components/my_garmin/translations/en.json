@@ -558,6 +558,27 @@
           "hr_reserve": "Heart rate reserve",
           "custom": "Custom"
         }
+      },
+      "acclimation_spo2_average": {
+        "name": "Average SpO2 (acclimation)"
+      },
+      "acclimation_spo2_lowest": {
+        "name": "Lowest SpO2 (acclimation)"
+      },
+      "acclimation_spo2_latest": {
+        "name": "Latest SpO2 (acclimation)"
+      },
+      "acclimation_spo2_seven_day_average": {
+        "name": "SpO2 seven-day average"
+      },
+      "acclimation_spo2_sleep_average": {
+        "name": "Average SpO2 during sleep"
+      },
+      "acclimation_spo2_tomorrow_sleep_average": {
+        "name": "Average SpO2 during tomorrow's sleep"
+      },
+      "acclimation_altitude": {
+        "name": "Average altitude (acclimation)"
       }
     },
     "event": {
