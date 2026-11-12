@@ -579,6 +579,12 @@
       },
       "acclimation_altitude": {
         "name": "Altitude moyenne (acclimatation)"
+      },
+      "abnormal_heart_rate_high_threshold": {
+        "name": "Seuil de fréquence cardiaque anormalement élevée"
+      },
+      "abnormal_heart_rate_low_threshold": {
+        "name": "Seuil de fréquence cardiaque anormalement basse"
       }
     },
     "event": {

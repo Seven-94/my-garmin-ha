@@ -43,6 +43,8 @@ def mock_client() -> Iterator[MagicMock]:
     client.get_heart_rate_zones = AsyncMock(return_value=[])
     # Garmin's null body for a device without SpO2, as the client returns it.
     client.get_spo2 = AsyncMock(return_value={})
+    # Garmin's null body, as the client returns it.
+    client.get_daily_heart_rate = AsyncMock(return_value={})
     with (
         patch(
             "custom_components.my_garmin.config_flow.GarminPersonalClient",

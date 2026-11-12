@@ -408,3 +408,35 @@ async def test_get_spo2_rejects_a_payload_that_is_not_an_object(
 
     with pytest.raises(GarminApiError):
         await client.get_spo2(date(2026, 11, 10))
+
+
+DAILY_HEART_RATE_PATH = "/wellness-service/wellness/dailyHeartRate"
+
+
+async def test_get_daily_heart_rate_sends_the_date(
+    client: GarminPersonalClient,
+) -> None:
+    heart_rate = await client.get_daily_heart_rate(date(2026, 11, 10))
+
+    assert heart_rate == {
+        "path": DAILY_HEART_RATE_PATH,
+        "query": {"date": "2026-11-10"},
+    }
+
+
+@pytest.mark.parametrize("body", ["null", ""])
+async def test_get_daily_heart_rate_without_data_returns_an_empty_object(
+    client: GarminPersonalClient, fake_garmin: FakeGarmin, body: str
+) -> None:
+    fake_garmin.data_replies[DAILY_HEART_RATE_PATH] = [Reply(body=body)]
+
+    assert await client.get_daily_heart_rate(date(2026, 11, 10)) == {}
+
+
+async def test_get_daily_heart_rate_rejects_a_payload_that_is_not_an_object(
+    client: GarminPersonalClient, fake_garmin: FakeGarmin
+) -> None:
+    fake_garmin.data_replies[DAILY_HEART_RATE_PATH] = [Reply(body="[1, 2]")]
+
+    with pytest.raises(GarminApiError):
+        await client.get_daily_heart_rate(date(2026, 11, 10))
