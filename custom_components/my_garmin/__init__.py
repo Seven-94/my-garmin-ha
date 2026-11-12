@@ -11,6 +11,7 @@ from .coordinator import (
     ActivitiesCoordinator,
     DailySummaryCoordinator,
     FitnessAgeCoordinator,
+    HeartRateZonesCoordinator,
     HrvCoordinator,
     MyGarminData,
     SleepCoordinator,
@@ -58,6 +59,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: MyGarminConfigEntry) -> 
     await activities.async_refresh()
     fitness_age = FitnessAgeCoordinator(hass, entry, client)
     await fitness_age.async_refresh()
+    heart_rate_zones = HeartRateZonesCoordinator(hass, entry, client)
+    await heart_rate_zones.async_refresh()
 
     entry.runtime_data = MyGarminData(
         client=client,
@@ -67,6 +70,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: MyGarminConfigEntry) -> 
         weight=weight,
         activities=activities,
         fitness_age=fitness_age,
+        heart_rate_zones=heart_rate_zones,
     )
     watcher = SyncWatcher(hass, daily, [sleep, hrv, weight, activities, fitness_age])
     entry.async_on_unload(daily.async_add_listener(watcher))

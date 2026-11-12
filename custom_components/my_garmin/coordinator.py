@@ -270,6 +270,36 @@ class ActivitiesCoordinator(MyGarminCoordinator):
         return {"activities": sorted(activities, key=activity_start, reverse=True)}
 
 
+# Zones change when the user edits them or Garmin re-estimates the resting and
+# threshold heart rates: rarely. Six hours shows a new value the same day
+# without asking Garmin every few minutes. A watch sync does not change them,
+# so it does not trigger a refresh.
+ZONES_INTERVAL = timedelta(hours=6)
+
+
+class HeartRateZonesCoordinator(MyGarminCoordinator):
+    """The heart rate zones of each sport, refreshed every six hours."""
+
+    def __init__(
+        self,
+        hass: HomeAssistant,
+        entry: ConfigEntry[MyGarminData],
+        client: GarminPersonalClient,
+    ) -> None:
+        super().__init__(
+            hass,
+            entry,
+            client,
+            name="heart rate zones",
+            update_interval=ZONES_INTERVAL,
+            fetch=self._async_fetch_zones,
+        )
+
+    async def _async_fetch_zones(self, day: date) -> JsonObject:
+        del day  # settings: the same zones whatever the day
+        return {"zones": await self.client.get_heart_rate_zones()}
+
+
 def _last_sync(coordinator: DailySummaryCoordinator) -> object:
     return (coordinator.data or {}).get("lastSyncTimestampGMT")
 
@@ -333,3 +363,4 @@ class MyGarminData:
     weight: WeightCoordinator
     activities: ActivitiesCoordinator
     fitness_age: FitnessAgeCoordinator
+    heart_rate_zones: HeartRateZonesCoordinator

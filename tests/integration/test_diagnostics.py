@@ -169,6 +169,7 @@ async def test_diagnostics_keep_the_setup_state_and_the_shape_of_measurements(
         "weight",
         "activities",
         "fitness_age",
+        "heart_rate_zones",
     }
     daily = coordinators["daily"]
     assert daily["name"] == f"{DOMAIN} daily summary"

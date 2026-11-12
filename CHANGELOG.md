@@ -66,6 +66,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and previous fitness age (previous one disabled by default); and the reason
   there is no fitness age as a diagnostic sensor. The chronological age is
   never read.
+- Heart rate zone sensors, diagnostic and refreshed every six hours: maximum
+  and lactate threshold heart rates, resting heart rate, floors of zones 1 to
+  5 and training method, for the DEFAULT sport (the first sport when there is
+  none). Lactate threshold and training method are disabled by default; the
+  zones of the other sports are attributes.
 
 ### Changed
 
