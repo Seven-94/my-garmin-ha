@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Hydration sensors, disabled by default: sweat loss and fluid intake during
+  activities, refreshed every hour and after each watch sync, with the time of
+  the last entry as an attribute. Intake and goal stay on the daily summary.
+
 ### Fixed
 
 - The release zip stores its files uncompressed, so a local build of a tag

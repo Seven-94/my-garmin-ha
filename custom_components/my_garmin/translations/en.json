@@ -585,6 +585,12 @@
       },
       "abnormal_heart_rate_low_threshold": {
         "name": "Abnormal low heart rate threshold"
+      },
+      "hydration_sweat_loss": {
+        "name": "Sweat loss"
+      },
+      "hydration_activity_intake": {
+        "name": "Fluid intake during activities"
       }
     },
     "event": {

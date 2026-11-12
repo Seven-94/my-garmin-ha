@@ -172,6 +172,7 @@ async def test_diagnostics_keep_the_setup_state_and_the_shape_of_measurements(
         "heart_rate_zones",
         "spo2",
         "heart_rate_thresholds",
+        "hydration",
     }
     daily = coordinators["daily"]
     assert daily["name"] == f"{DOMAIN} daily summary"

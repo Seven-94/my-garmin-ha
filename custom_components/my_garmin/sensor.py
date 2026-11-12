@@ -1206,6 +1206,46 @@ HEART_RATE_THRESHOLD_SENSORS: tuple[MyGarminSensorDescription, ...] = (
 )
 
 
+def _local(value: object) -> datetime | None:
+    """A Garmin *Local time: no offset, in the user's time zone, as in HA."""
+    if not isinstance(value, str):
+        return None
+    parsed = dt_util.parse_datetime(value)
+    if parsed is None or parsed.tzinfo is not None:
+        return parsed
+    return parsed.replace(tzinfo=dt_util.get_default_time_zone())
+
+
+def _hydration_attributes(data: JsonObject) -> dict[str, Any]:
+    last_entry = _local(data.get("lastEntryTimestampLocal"))
+    return {
+        "day": data.get("calendarDate"),
+        **({"last_entry": last_entry.isoformat()} if last_entry else {}),
+    }
+
+
+def _hydration(key: str, field: str) -> MyGarminSensorDescription:
+    """A hydration total of the day, in mL; niche, so disabled by default."""
+    return replace(
+        _counter(
+            key,
+            field,
+            UnitOfVolume.MILLILITERS,
+            device_class=SensorDeviceClass.VOLUME,
+            enabled=False,
+        ),
+        attributes_fn=_hydration_attributes,
+    )
+
+
+# The same response carries the day's intake and goal: the daily summary
+# sensors already show them.
+HYDRATION_SENSORS: tuple[MyGarminSensorDescription, ...] = (
+    _hydration("hydration_sweat_loss", "sweatLossInML"),
+    _hydration("hydration_activity_intake", "activityIntakeInML"),
+)
+
+
 async def async_setup_entry(
     hass: HomeAssistant,
     entry: MyGarminConfigEntry,
@@ -1239,6 +1279,10 @@ async def async_setup_entry(
             *(
                 MyGarminSensor(data.heart_rate_thresholds, description)
                 for description in HEART_RATE_THRESHOLD_SENSORS
+            ),
+            *(
+                MyGarminSensor(data.hydration, description)
+                for description in HYDRATION_SENSORS
             ),
             *(
                 MyGarminSensor(data.daily, description)
